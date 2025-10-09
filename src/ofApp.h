@@ -21,4 +21,12 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
 		
+		// Objects
+		ofEasyCam cam;
+		ofBoxPrimitive demo;
+		ofShader basic;
+
+		// Settings
+		int screenWidth;
+		int screenHeight;
 };
