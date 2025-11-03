@@ -6,7 +6,10 @@ void ofApp::setup(){
 	basic.load("../../src/basic.vert", "../../src/basic.frag");
 
 	// Miscellanous 
-	ofSetVerticalSync(true);
+	// Disable timing and frame-rate for offline rendering
+	ofSetFrameRate(0);
+	ofSetVerticalSync(false);
+
 	ofEnableDepthTest();
 	ofBackground(30.0, 30.0, 30.0, 255);
 
@@ -20,6 +23,9 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+	// Establish a unit of time for animations
+	float frameTime = 1.0f / 30.0f; // Time per frame
+	float elapsedTime = frameCount * frameTime; // Time since start
 
 }
 
@@ -43,6 +49,20 @@ void ofApp::draw(){
 	// Footer
 	basic.end();
 	cam.end();
+
+	// Save a frame
+	ofSaveScreen("../../out/output" + ofToString(frameCount, 5, '0') + ".png");
+	frameCount++;
+
+	if (frameCount >= totalFrames) {
+		ofExit(); 
+	}
+
+	// Batch script
+	// Run this (on windows) with ffmpeg to generate a video using the frames 
+	// https://ffmpeg.org/download.html
+	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 30 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
+
 }
 
 //--------------------------------------------------------------

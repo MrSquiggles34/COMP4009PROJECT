@@ -29,4 +29,8 @@ class ofApp : public ofBaseApp{
 		// Settings
 		int screenWidth;
 		int screenHeight;
+		int frameCount = 0;
+		int totalFrames = 150; // 10 seconds at 30 fps
+
+		// 
 };
