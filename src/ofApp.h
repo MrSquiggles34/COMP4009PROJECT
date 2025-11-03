@@ -20,11 +20,12 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
+
+		glm::vec3 tracePixel(int x, int y, int frame);
 		
 		// Objects
-		ofEasyCam cam;
-		ofBoxPrimitive demo;
 		ofShader basic;
+		ofPixels pixels;
 
 		// Settings
 		int screenWidth;

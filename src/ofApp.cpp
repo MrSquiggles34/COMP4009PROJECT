@@ -3,22 +3,21 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
 	// Load resources
-	basic.load("../../src/basic.vert", "../../src/basic.frag");
+	//basic.load("../../src/basic.vert", "../../src/basic.frag");
 
 	// Miscellanous 
 	// Disable timing and frame-rate for offline rendering
 	ofSetFrameRate(0);
 	ofSetVerticalSync(false);
 
-	ofEnableDepthTest();
 	ofBackground(30.0, 30.0, 30.0, 255);
 
 	// Set values
 	screenWidth = ofGetWidth();
 	screenHeight = ofGetHeight();
-	
-	demo.set(100.0f);
-	cam.setPosition(screenWidth * 0.5, screenHeight * 0.5, 300.0f);
+
+	pixels.allocate(screenWidth, screenHeight, OF_IMAGE_COLOR); // RGB image
+
 }
 
 //--------------------------------------------------------------
@@ -31,32 +30,23 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-	// Header
-	cam.begin();
-	basic.begin();
 
-	// Initial Shader Uniforms
-	glm::mat4 projectionMatrix = cam.getProjectionMatrix();
-	basic.setUniformMatrix4f("projectionMatrix", projectionMatrix);
-
-	glm::mat4 worldMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(screenWidth * 0.5, screenHeight * 0.5, 0.0f));
-	basic.setUniformMatrix4f("worldMatrix", worldMatrix);
-	basic.setUniform3f("objectColor", glm::vec3(255.0, 255.0, 255.0) / 255.0f);
-	
 	// Body
-	demo.draw();
-
-	// Footer
-	basic.end();
-	cam.end();
+	for (int y = 0; y < screenHeight; y++) {
+		for (int x = 0; x < screenWidth; x++) {
+			glm::vec3 color = tracePixel(x, y, frameCount);
+			pixels.setColor(x, y, ofColor(color.r * 255, color.g * 255, color.b * 255));
+		}
+	}
 
 	// Save a frame
-	ofSaveScreen("../../out/output" + ofToString(frameCount, 5, '0') + ".png");
+	ofSaveImage(pixels, "../../out/output" + ofToString(frameCount, 5, '0') + ".png");
 	frameCount++;
 
 	if (frameCount >= totalFrames) {
-		ofExit(); 
+		ofExit();
 	}
+
 
 	// Batch script
 	// Run this (on windows) with ffmpeg to generate a video using the frames 
@@ -64,6 +54,13 @@ void ofApp::draw(){
 	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 30 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
 
 }
+
+glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
+	// Ray tracing properties. See RTIOW
+	// Return color 
+	return glm::vec3(0.0f, 0.0f, 0.0f); 
+}
+
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
