@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ofMain.h"
+#include "camera.h"
+#include "sphere.h"
 
 class ofApp : public ofBaseApp{
 
@@ -21,17 +23,21 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
 
+		// The Raytracing Algorithm
 		glm::vec3 tracePixel(int x, int y, int frame);
 		
 		// Objects
 		ofShader basic;
 		ofPixels pixels;
+		Camera cam;
 
+		// Scene Data structures
+		std::vector<Sphere> spheres;
+		
 		// Settings
 		int screenWidth;
 		int screenHeight;
 		int frameCount = 0;
 		int totalFrames = 150; // 10 seconds at 30 fps
 
-		// 
 };

@@ -10,12 +10,18 @@ void ofApp::setup(){
 	ofSetFrameRate(0);
 	ofSetVerticalSync(false);
 
-	ofBackground(30.0, 30.0, 30.0, 255);
-
 	// Set values
 	screenWidth = ofGetWidth();
 	screenHeight = ofGetHeight();
+	cam = Camera();
+	
+	// Reposition camera
+	cam.camera_center = glm::vec3(0, 0, 3.0f);
+	cam.lowerLeft = cam.camera_center - cam.horizontal / 2.0f - cam.vertical / 2.0f - glm::vec3(0, 0, cam.focalLength);
 
+	// Fill the scene
+	spheres.push_back(Sphere(glm::vec3(0, 0, 0), 1.0f, glm::vec3(1.0f, 0.5f, 0.0f))); 
+	
 	pixels.allocate(screenWidth, screenHeight, OF_IMAGE_COLOR); // RGB image
 
 }
@@ -23,8 +29,8 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update(){
 	// Establish a unit of time for animations
-	float frameTime = 1.0f / 30.0f; // Time per frame
-	float elapsedTime = frameCount * frameTime; // Time since start
+	double frameTime = 1.0f / 30.0f; // Time per frame
+	double elapsedTime = frameCount * frameTime; // Time since start
 
 }
 
@@ -39,7 +45,7 @@ void ofApp::draw(){
 		}
 	}
 
-	// Save a frame
+	// Save a frame and exit
 	ofSaveImage(pixels, "../../out/output" + ofToString(frameCount, 5, '0') + ".png");
 	frameCount++;
 
@@ -56,9 +62,28 @@ void ofApp::draw(){
 }
 
 glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
-	// Ray tracing properties. See RTIOW
-	// Return color 
-	return glm::vec3(0.0f, 0.0f, 0.0f); 
+	double u = double(x) / (screenWidth - 1);
+	double v = double(y) / (screenHeight - 1);
+
+	Ray r = cam.getRay(u, v);
+
+	glm::vec3 background(1.0f, 1.0f, 1.0f);
+	glm::vec3 color = background;
+	double tMin = 1e20; // substitutes infinity
+
+	for (auto& sphere : spheres) {
+		double t;
+		if (sphere.intersect(r, t) && t < tMin) {
+			tMin = t;
+			glm::vec3 hitPoint = r.orig + t * r.dir;
+			glm::vec3 normal = glm::normalize(hitPoint - sphere.center);
+			glm::vec3 lightDir = glm::normalize(cam.camera_center);
+			double diff = glm::max(glm::dot(normal, lightDir), 0.0f);
+			color = sphere.color * diff;
+		}
+	}
+
+	return color;
 }
 
 
