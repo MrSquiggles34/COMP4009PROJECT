@@ -3,6 +3,7 @@
 #include "ofMain.h"
 #include "camera.h"
 #include "sphere.h"
+#include "cylinder.h"
 
 class ofApp : public ofBaseApp{
 
@@ -32,7 +33,7 @@ class ofApp : public ofBaseApp{
 		Camera cam;
 
 		// Scene Data structures
-		std::vector<Sphere> spheres;
+		std::vector<std::shared_ptr<hittable>> world;
 		
 		// Settings
 		int screenWidth;

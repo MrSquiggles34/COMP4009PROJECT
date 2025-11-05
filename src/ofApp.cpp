@@ -20,7 +20,9 @@ void ofApp::setup(){
 	cam.lowerLeft = cam.camera_center - cam.horizontal / 2.0f - cam.vertical / 2.0f - glm::vec3(0, 0, cam.focalLength);
 
 	// Fill the scene
-	spheres.push_back(Sphere(glm::vec3(0, 0, 0), 1.0f, glm::vec3(1.0f, 0.5f, 0.0f))); 
+	world.push_back(std::make_shared<Sphere>(glm::vec3(0, 0, -1), 0.5f, glm::vec3(1.0f, 0.5f, 0.0f)));
+	world.push_back(std::make_shared<Cylinder>(glm::vec3(0.0f, 2.0, -2.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f)));
+
 	
 	pixels.allocate(screenWidth, screenHeight, OF_IMAGE_COLOR); // RGB image
 
@@ -29,8 +31,8 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update(){
 	// Establish a unit of time for animations
-	double frameTime = 1.0f / 30.0f; // Time per frame
-	double elapsedTime = frameCount * frameTime; // Time since start
+	float frameTime = 1.0f / 30.0f; // Time per frame
+	float elapsedTime = frameCount * frameTime; // Time since start
 
 }
 
@@ -62,28 +64,28 @@ void ofApp::draw(){
 }
 
 glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
-	double u = double(x) / (screenWidth - 1);
-	double v = double(y) / (screenHeight - 1);
+	float u = float(x) / (screenWidth - 1);
+	float v = float(y) / (screenHeight - 1);
 
 	Ray r = cam.getRay(u, v);
 
-	glm::vec3 background(1.0f, 1.0f, 1.0f);
-	glm::vec3 color = background;
-	double tMin = 1e20; // substitutes infinity
+	hit_record rec;
+	float closest = 1e20; // Infinity
 
-	for (auto& sphere : spheres) {
-		double t;
-		if (sphere.intersect(r, t) && t < tMin) {
-			tMin = t;
-			glm::vec3 hitPoint = r.orig + t * r.dir;
-			glm::vec3 normal = glm::normalize(hitPoint - sphere.center);
-			glm::vec3 lightDir = glm::normalize(cam.camera_center);
-			double diff = glm::max(glm::dot(normal, lightDir), 0.0f);
-			color = sphere.color * diff;
+	// Set the background
+	glm::vec3 background(1.0f, 1.0f, 1.0f);
+	glm::vec3 pixelColor = background;
+
+	// Test for ray-object intersections
+	for (auto& obj : world) {
+		if (obj->hit(r, 0.001, closest, rec)) {
+			closest = rec.t;
+			glm::vec3 lightDir = glm::normalize(cam.camera_center - rec.p); // Light source set as camera
+			float diff = glm::max(glm::dot(rec.normal, lightDir), 0.0f);
+			pixelColor = rec.color * diff; 
 		}
 	}
-
-	return color;
+	return pixelColor;
 }
 
 

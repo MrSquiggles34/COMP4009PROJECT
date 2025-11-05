@@ -12,7 +12,7 @@ public:
     const glm::vec3& origin() const { return orig; }
     const glm::vec3& direction() const { return dir; }
 
-    glm::vec3 at(double t) const {
+    glm::vec3 at(float t) const {
         return orig + t * dir;
     }
 
