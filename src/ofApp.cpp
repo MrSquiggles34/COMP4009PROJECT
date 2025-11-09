@@ -16,14 +16,14 @@ void ofApp::setup(){
 	cam = Camera();
 	
 	// Reposition camera
-	cam.camera_center = glm::vec3(0, 0, 3.0f);
+	cam.camera_center = glm::vec3(0, -1, 3.0f);
 	cam.lowerLeft = cam.camera_center - cam.horizontal / 2.0f - cam.vertical / 2.0f - glm::vec3(0, 0, cam.focalLength);
 
 	// Fill the scene
 	world.push_back(std::make_shared<Sphere>(glm::vec3(0, 0, -1), 0.5f, glm::vec3(1.0f, 0.5f, 0.0f)));
-	world.push_back(std::make_shared<Cylinder>(glm::vec3(0.0f, 2.0, -2.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f)));
+	world.push_back(std::make_shared<Cylinder>(glm::vec3(2.0f, 2.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(0.0, 0.0, 1.0)));
+	world.push_back(std::make_shared<Cylinder>(glm::vec3(0.0f, 4.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(1.0, 0.0, 0.5)));
 
-	
 	pixels.allocate(screenWidth, screenHeight, OF_IMAGE_COLOR); // RGB image
 
 }
@@ -73,16 +73,17 @@ glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
 	float closest = 1e20; // Infinity
 
 	// Set the background
-	glm::vec3 background(1.0f, 1.0f, 1.0f);
+	glm::vec3 background(0.0f, 0.0f, 0.0f);
 	glm::vec3 pixelColor = background;
 
 	// Test for ray-object intersections
 	for (auto& obj : world) {
 		if (obj->hit(r, 0.001, closest, rec)) {
 			closest = rec.t;
-			glm::vec3 lightDir = glm::normalize(cam.camera_center - rec.p); // Light source set as camera
+			glm::vec3 lightDir = glm::normalize(cam.camera_center); // Light source set as camera
 			float diff = glm::max(glm::dot(rec.normal, lightDir), 0.0f);
-			pixelColor = rec.color * diff; 
+			float ambient = 0.2;
+			pixelColor = rec.color * (diff);
 		}
 	}
 	return pixelColor;
