@@ -4,6 +4,10 @@
 #include "camera.h"
 #include "sphere.h"
 #include "cylinder.h"
+#include "lightsource.h"
+
+
+
 
 class ofApp : public ofBaseApp{
 
@@ -34,6 +38,8 @@ class ofApp : public ofBaseApp{
 
 		// Scene Data structures
 		std::vector<std::shared_ptr<hittable>> world;
+		std::vector<LightSource> lights;
+
 		
 		// Settings
 		int screenWidth;

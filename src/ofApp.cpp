@@ -24,8 +24,22 @@ void ofApp::setup(){
 	world.push_back(std::make_shared<Cylinder>(glm::vec3(2.0f, 2.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(0.0, 0.0, 1.0)));
 	world.push_back(std::make_shared<Cylinder>(glm::vec3(0.0f, 4.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(1.0, 0.0, 0.5)));
 
-	pixels.allocate(screenWidth, screenHeight, OF_IMAGE_COLOR); // RGB image
+	// Create multiple light sources
+	for (int i = 0; i < 10; i++) {
+		float x = ofRandom(-3.0f, 3.0f);
+		float z = ofRandom(-6.0f, -2.0f);
+		float y = ofRandom(3.0f, 6.0f);
+		glm::vec3 pos(x, y, z);
+		glm::vec3 dir(0.0f, -1.0f, 0.0f); 
+		float intensity = ofRandom(0.0f, 1.0f); 
+		glm::vec3 lightColor(0.95f, 0.98f, 1.0f); 
+		lights.emplace_back(pos, dir, intensity, lightColor, 0.1f, 1.0f);
 
+		
+		world.push_back(std::make_shared<Cylinder>(pos, 0.05f, 2.0f, glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0, 1.0, 0.0)));
+	}
+
+	pixels.allocate(screenWidth, screenHeight, OF_IMAGE_COLOR); 
 }
 
 //--------------------------------------------------------------
@@ -33,16 +47,33 @@ void ofApp::update(){
 	// Establish a unit of time for animations
 	float frameTime = 1.0f / 30.0f; // Time per frame
 	float elapsedTime = frameCount * frameTime; // Time since start
+	(void)elapsedTime;
 
+	for (auto &light : lights) {
+		if (ofRandom(1.0f) < 0.02f) {
+			light.intensity = ofRandom(6.0f, 18.0f); 
+			
+			light.position.x += ofRandom(-0.2f, 0.2f);
+			light.position.z += ofRandom(-0.2f, 0.2f);
+		} else {
+			
+			light.intensity *= 0.92f;
+			light.position.x += ofRandom(-0.01f, 0.01f);
+			light.position.y += ofRandom(-0.01f, 0.01f);
+		}
+
+		
+		light.intensity = glm::clamp(light.intensity, 0.0f, 30.0f);
+	}
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
 
-	// Body
 	for (int y = 0; y < screenHeight; y++) {
 		for (int x = 0; x < screenWidth; x++) {
 			glm::vec3 color = tracePixel(x, y, frameCount);
+			color = glm::clamp(color, 0.0f, 1.0f);
 			pixels.setColor(x, y, ofColor(color.r * 255, color.g * 255, color.b * 255));
 		}
 	}
@@ -55,22 +86,21 @@ void ofApp::draw(){
 		ofExit();
 	}
 
-
 	// Batch script
 	// Run this (on windows) with ffmpeg to generate a video using the frames 
 	// https://ffmpeg.org/download.html
 	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 30 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
-
 }
 
 glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
+	(void)frame; 
 	float u = float(x) / (screenWidth - 1);
 	float v = float(y) / (screenHeight - 1);
 
 	Ray r = cam.getRay(u, v);
 
 	hit_record rec;
-	float closest = 1e20; // Infinity
+	float closest = 1e20f; // Infinity
 
 	// Set the background
 	glm::vec3 background(0.0f, 0.0f, 0.0f);
@@ -78,17 +108,50 @@ glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
 
 	// Test for ray-object intersections
 	for (auto& obj : world) {
-		if (obj->hit(r, 0.001, closest, rec)) {
+		if (obj->hit(r, 0.001f, closest, rec)) {
 			closest = rec.t;
-			glm::vec3 lightDir = glm::normalize(cam.camera_center); // Light source set as camera
-			float diff = glm::max(glm::dot(rec.normal, lightDir), 0.0f);
-			float ambient = 0.2;
-			pixelColor = rec.color * (diff);
+
+			glm::vec3 totalLightRGB(0.0f);
+
+			for (auto& light : lights) {
+				glm::vec3 L = light.position - rec.p;
+				float dist2 = glm::dot(L, L);
+				float dist = sqrt(dist2);
+				if (dist < 1e-4f) continue;
+				glm::vec3 lightDir = glm::normalize(L);
+
+				// Lambertian diffuse
+				float diff = glm::max(glm::dot(rec.normal, lightDir), 0.0f);
+
+				float attenuation = light.intensity / (dist2 + 0.001f);
+
+				totalLightRGB += light.color * (diff * attenuation);
+			}
+
+			// Ambient (base)
+			glm::vec3 ambient = 0.08f * rec.color;
+
+			float brightness = glm::clamp(glm::max(glm::max(totalLightRGB.r, totalLightRGB.g), totalLightRGB.b), 0.0f, 1.0f);
+
+			glm::vec3 washedColor = glm::mix(rec.color, glm::vec3(1.0f), brightness * 0.95f);
+
+			glm::vec3 diffuse = washedColor * brightness;
+
+			glm::vec3 emissive(0.0f);
+			if (rec.color.r > 0.95f && rec.color.g > 0.95f && rec.color.b > 0.95f) {
+				float emissionFactor = glm::clamp(glm::max(glm::max(totalLightRGB.r, totalLightRGB.g), totalLightRGB.b), 0.0f, 10.0f);
+				emissive = rec.color * (emissionFactor * 0.35f);
+			}
+
+			pixelColor = ambient + diffuse + emissive;
+
+			// final clamp
+			pixelColor = glm::clamp(pixelColor, glm::vec3(0.0f), glm::vec3(1.0f));
 		}
 	}
+
 	return pixelColor;
 }
-
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
