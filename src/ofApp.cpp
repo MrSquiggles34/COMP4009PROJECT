@@ -16,15 +16,15 @@ void ofApp::setup(){
 	cam = Camera();
 	
 	// Reposition camera
-	cam.camera_center = glm::vec3(0, -1, 3.0f);
+	cam.camera_center = glm::vec3(0, 0, 3.0f);
 	cam.lowerLeft = cam.camera_center - cam.horizontal / 2.0f - cam.vertical / 2.0f - glm::vec3(0, 0, cam.focalLength);
 
 	// Fill the scene
 	world.push_back(std::make_shared<Sphere>(glm::vec3(0, 0, -1), 0.5f, glm::vec3(1.0f, 0.5f, 0.0f)));
 	world.push_back(std::make_shared<Cylinder>(glm::vec3(2.0f, 2.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(0.0, 0.0, 1.0)));
-	world.push_back(std::make_shared<Cylinder>(glm::vec3(0.0f, 4.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(1.0, 0.0, 0.5)));
+	world.push_back(std::make_shared<Cylinder>(glm::vec3(-3.0f, 3.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(1.0, 0.0, 0.5)));
 
-	// Create multiple light sources
+	// Create multiple lightningSegments
 	for (int i = 0; i < 10; i++) {
 		float x = ofRandom(-3.0f, 3.0f);
 		float z = ofRandom(-6.0f, -2.0f);
@@ -33,10 +33,12 @@ void ofApp::setup(){
 		glm::vec3 dir(0.0f, -1.0f, 0.0f); 
 		float intensity = ofRandom(0.0f, 1.0f); 
 		glm::vec3 lightColor(0.95f, 0.98f, 1.0f); 
-		lights.emplace_back(pos, dir, intensity, lightColor, 0.1f, 1.0f);
+		lightSources.emplace_back(pos, dir, intensity, lightColor, 0.1f, 1.0f);
 
-		
-		world.push_back(std::make_shared<Cylinder>(pos, 0.05f, 2.0f, glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0, 1.0, 0.0)));
+		LightSource& ls = lightSources.back();
+		auto lightningSegment = std::make_shared<LightningSegment>(pos, 0.05f, 2.0f, glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), true, ls);
+		lightningSegments.push_back(lightningSegment);
+		world.push_back(lightningSegment); 
 	}
 
 	pixels.allocate(screenWidth, screenHeight, OF_IMAGE_COLOR); 
@@ -49,7 +51,7 @@ void ofApp::update(){
 	float elapsedTime = frameCount * frameTime; // Time since start
 	(void)elapsedTime;
 
-	for (auto &light : lights) {
+	for (auto &light : lightSources) {
 		if (ofRandom(1.0f) < 0.02f) {
 			light.intensity = ofRandom(6.0f, 18.0f); 
 			
@@ -113,7 +115,10 @@ glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
 
 			glm::vec3 totalLightRGB(0.0f);
 
-			for (auto& light : lights) {
+			for (auto& lightningSegment : lightningSegments) {
+				// Use the light attached to every lightning segment
+				auto& light = *(lightningSegment->lightSource);
+
 				glm::vec3 L = light.position - rec.p;
 				float dist2 = glm::dot(L, L);
 				float dist = sqrt(dist2);
