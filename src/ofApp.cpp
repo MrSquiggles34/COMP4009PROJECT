@@ -25,15 +25,12 @@ void ofApp::setup(){
 	world.push_back(std::make_shared<Cylinder>(glm::vec3(-3.0f, 3.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(1.0, 0.0, 0.5)));
 
 	// Create multiple lightningSegments
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < 3; i++) {
 		float x = ofRandom(-3.0f, 3.0f);
 		float z = ofRandom(-6.0f, -2.0f);
 		float y = ofRandom(3.0f, 6.0f);
 		glm::vec3 pos(x, y, z);
-		glm::vec3 dir(0.0f, -1.0f, 0.0f); 
-		float intensity = ofRandom(0.0f, 1.0f); 
-		glm::vec3 lightColor(0.95f, 0.98f, 1.0f); 
-		lightSources.emplace_back(pos, dir, intensity, lightColor, 0.1f, 1.0f);
+		lightSources.emplace_back(pos);
 
 		LightSource& ls = lightSources.back();
 		auto lightningSegment = std::make_shared<LightningSegment>(pos, 0.05f, 2.0f, glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), true, ls);
@@ -49,24 +46,6 @@ void ofApp::update(){
 	// Establish a unit of time for animations
 	float frameTime = 1.0f / 30.0f; // Time per frame
 	float elapsedTime = frameCount * frameTime; // Time since start
-	(void)elapsedTime;
-
-	for (auto &light : lightSources) {
-		if (ofRandom(1.0f) < 0.02f) {
-			light.intensity = ofRandom(6.0f, 18.0f); 
-			
-			light.position.x += ofRandom(-0.2f, 0.2f);
-			light.position.z += ofRandom(-0.2f, 0.2f);
-		} else {
-			
-			light.intensity *= 0.92f;
-			light.position.x += ofRandom(-0.01f, 0.01f);
-			light.position.y += ofRandom(-0.01f, 0.01f);
-		}
-
-		
-		light.intensity = glm::clamp(light.intensity, 0.0f, 30.0f);
-	}
 }
 
 //--------------------------------------------------------------
@@ -128,13 +107,11 @@ glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
 				// Lambertian diffuse
 				float diff = glm::max(glm::dot(rec.normal, lightDir), 0.0f);
 
-				float attenuation = light.intensity / (dist2 + 0.001f);
-
-				totalLightRGB += light.color * (diff * attenuation);
+				totalLightRGB += glm::vec3(diff);
 			}
 
 			// Ambient (base)
-			glm::vec3 ambient = 0.08f * rec.color;
+			glm::vec3 ambient = 0.1f * rec.color;
 
 			float brightness = glm::clamp(glm::max(glm::max(totalLightRGB.r, totalLightRGB.g), totalLightRGB.b), 0.0f, 1.0f);
 

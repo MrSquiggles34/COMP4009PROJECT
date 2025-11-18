@@ -44,6 +44,6 @@ class ofApp : public ofBaseApp{
 		int screenWidth;
 		int screenHeight;
 		int frameCount = 0;
-		int totalFrames = 150; // 10 seconds at 30 fps
+		int totalFrames = 60; // 2 seconds at 30 fps
 
 };
