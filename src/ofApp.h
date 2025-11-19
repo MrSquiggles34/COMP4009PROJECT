@@ -6,6 +6,7 @@
 #include "cylinder.h"
 #include "lightsource.h"
 #include "lightningSegment.h"
+#include "branch.h"
 
 class ofApp : public ofBaseApp{
 
