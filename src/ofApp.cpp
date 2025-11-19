@@ -1,11 +1,12 @@
 #include "ofApp.h"
+#include <filesystem>
 
 //--------------------------------------------------------------
-void ofApp::setup(){
+void ofApp::setup() {
 	// Load resources
 	//basic.load("../../src/basic.vert", "../../src/basic.frag");
 
-	// Miscellanous 
+	// Miscellanous
 	// Disable timing and frame-rate for offline rendering
 	ofSetFrameRate(0);
 	ofSetVerticalSync(false);
@@ -14,7 +15,7 @@ void ofApp::setup(){
 	screenWidth = ofGetWidth();
 	screenHeight = ofGetHeight();
 	cam = Camera();
-	
+
 	// Reposition camera
 	cam.camera_center = glm::vec3(0, 0, 2.0f);
 	cam.lowerLeft = cam.camera_center - cam.horizontal / 2.0f - cam.vertical / 2.0f - glm::vec3(0, 0, cam.focalLength);
@@ -44,11 +45,11 @@ void ofApp::setup(){
 	for (auto& s : mainBranch.segments)
 		lightningSegments.push_back(s);
 
-	pixels.allocate(screenWidth, screenHeight, OF_IMAGE_COLOR); 
+	pixels.allocate(screenWidth, screenHeight, OF_IMAGE_COLOR);
 }
 
 //--------------------------------------------------------------
-void ofApp::update(){
+void ofApp::update() {
 	// Establish a unit of time for animations
 	float frameTime = 1.0f / 30.0f; // Time per frame
 	float elapsedTime = frameCount * frameTime; // Time since start
@@ -64,8 +65,35 @@ void ofApp::draw(){
 		}
 	}
 
-	// Save a frame and exit
-	ofSaveImage(pixels, "../../out/output" + ofToString(frameCount, 5, '0') + ".png");
+	namespace fs = std::filesystem;
+	fs::path cwd = fs::current_path();
+	fs::path search = cwd;
+	fs::path projectRoot;
+	bool found = false;
+	for (int i = 0; i < 10; ++i) {
+		if (fs::exists(search / "src")) {
+			projectRoot = search;
+			found = true;
+			break;
+		}
+		if (search.has_parent_path())
+			search = search.parent_path();
+		else
+			break;
+	}
+
+	fs::path outPath = found ? (projectRoot / "out") : (cwd / "out");
+	std::error_code ec;
+	fs::create_directories(outPath, ec);
+
+	std::string filename = "output" + ofToString(frameCount, 5, '0') + ".png";
+	fs::path savePath = outPath / filename;
+
+	ofLog() << "CWD: " << cwd.string();
+	ofLog() << "Saving frame to (relative): " << (fs::relative(savePath, cwd)).string();
+	ofLog() << "Saving frame to (absolute): " << fs::absolute(savePath).string();
+
+	ofSaveImage(pixels, savePath.string());
 	frameCount++;
 
 	if (frameCount >= totalFrames) {
@@ -73,7 +101,7 @@ void ofApp::draw(){
 	}
 
 	// Batch script
-	// Run this (on windows) with ffmpeg to generate a video using the frames 
+	// Run this (on windows) with ffmpeg to generate a video using the frames
 	// https://ffmpeg.org/download.html
 	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 30 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
 }
@@ -141,56 +169,45 @@ glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
 }
 
 //--------------------------------------------------------------
-void ofApp::keyPressed(int key){
-
+void ofApp::keyPressed(int key) {
 }
 
 //--------------------------------------------------------------
-void ofApp::keyReleased(int key){
-
+void ofApp::keyReleased(int key) {
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseMoved(int x, int y ){
-
+void ofApp::mouseMoved(int x, int y) {
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseDragged(int x, int y, int button){
-
+void ofApp::mouseDragged(int x, int y, int button) {
 }
 
 //--------------------------------------------------------------
-void ofApp::mousePressed(int x, int y, int button){
-
+void ofApp::mousePressed(int x, int y, int button) {
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseReleased(int x, int y, int button){
-
+void ofApp::mouseReleased(int x, int y, int button) {
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseEntered(int x, int y){
-
+void ofApp::mouseEntered(int x, int y) {
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseExited(int x, int y){
-
+void ofApp::mouseExited(int x, int y) {
 }
 
 //--------------------------------------------------------------
-void ofApp::windowResized(int w, int h){
-
+void ofApp::windowResized(int w, int h) {
 }
 
 //--------------------------------------------------------------
-void ofApp::gotMessage(ofMessage msg){
-
+void ofApp::gotMessage(ofMessage msg) {
 }
 
 //--------------------------------------------------------------
-void ofApp::dragEvent(ofDragInfo dragInfo){ 
-
+void ofApp::dragEvent(ofDragInfo dragInfo) {
 }
