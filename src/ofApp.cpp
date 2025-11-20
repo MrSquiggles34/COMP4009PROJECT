@@ -165,6 +165,15 @@ glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
 		}
 	}
 
+	if (closest == 1e20f) {
+		glm::vec3 glowTotal(0.0f);
+		for (const auto & seg : lightningSegments) {
+			float glow = seg->computeGlowForRay(r);
+			glowTotal += glm::vec3(1.0f) * glow;
+		}
+		pixelColor = glowTotal;
+	}
+
 	return pixelColor;
 }
 
