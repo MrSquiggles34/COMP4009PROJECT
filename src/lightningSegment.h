@@ -22,12 +22,14 @@ public:
 
     // Is it a light?
     bool hasEmission;
+    glm::vec3 startPoint;
+    glm::vec3 endPoint;
 
     // Attached Light
     std::shared_ptr<LightSource> lightSource;
 
     // Turn the light on
-    bool isEmissive() const {
+    bool isEmissive() {
         return hasEmission && lightSource != nullptr;
     }
 };
