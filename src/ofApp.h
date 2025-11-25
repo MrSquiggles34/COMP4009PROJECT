@@ -5,9 +5,8 @@
 #include "sphere.h"
 #include "cylinder.h"
 #include "lightsource.h"
-
-
-
+#include "lightningSegment.h"
+#include "branch.h"
 
 class ofApp : public ofBaseApp{
 
@@ -38,13 +37,14 @@ class ofApp : public ofBaseApp{
 
 		// Scene Data structures
 		std::vector<std::shared_ptr<hittable>> world;
-		std::vector<LightSource> lights;
+		std::vector<LightSource> lightSources;
+		std::vector<std::shared_ptr<LightningSegment>> lightningSegments;
 
 		
 		// Settings
 		int screenWidth;
 		int screenHeight;
 		int frameCount = 0;
-		int totalFrames = 150; // 10 seconds at 30 fps
+		int totalFrames = 60;
 
 };
