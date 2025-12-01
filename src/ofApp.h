@@ -28,7 +28,7 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
 
 		// The Raytracing Algorithm
-		glm::vec3 tracePixel(int x, int y, int frame);
+		glm::vec3 tracePixel(int x, int y, int frame, const std::vector<std::shared_ptr<LightningSegment>>& segs);
 		
 		// Objects
 		ofShader basic;
@@ -39,6 +39,7 @@ class ofApp : public ofBaseApp{
 		std::vector<std::shared_ptr<hittable>> world;
 		std::vector<LightSource> lightSources;
 		std::vector<std::shared_ptr<LightningSegment>> lightningSegments;
+		int segmentsToShow = 0;
 
 		
 		// Settings

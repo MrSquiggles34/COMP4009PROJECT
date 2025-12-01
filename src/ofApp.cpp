@@ -50,6 +50,11 @@ void ofApp::setup() {
 
 //--------------------------------------------------------------
 void ofApp::update() {
+	// Reveal one more lightning segment per frame
+	if (segmentsToShow < lightningSegments.size()) {
+		segmentsToShow += 3;
+	}
+
 	// Establish a unit of time for animations
 	float frameTime = 1.0f / 30.0f; // Time per frame
 	float elapsedTime = frameCount * frameTime; // Time since start
@@ -57,9 +62,16 @@ void ofApp::update() {
 
 //--------------------------------------------------------------
 void ofApp::draw(){
+
+	// Limit segments visible this frame
+	std::vector<std::shared_ptr<LightningSegment>> activeSegments(
+		lightningSegments.begin(),
+		lightningSegments.begin() + segmentsToShow
+	);
+
 	for (int y = 0; y < screenHeight; y++) {
 		for (int x = 0; x < screenWidth; x++) {
-			glm::vec3 color = tracePixel(x, y, frameCount);
+			glm::vec3 color = tracePixel(x, y, frameCount, activeSegments);
 			color = glm::clamp(color, 0.0f, 1.0f);
 			pixels.setColor(x, y, ofColor(color.r * 255, color.g * 255, color.b * 255));
 		}
@@ -106,7 +118,7 @@ void ofApp::draw(){
 	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 30 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
 }
 
-glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
+glm::vec3 ofApp::tracePixel(int x, int y, int frame, const std::vector<std::shared_ptr<LightningSegment>>& segs) {
 	(void)frame; 
 	float u = float(x) / (screenWidth - 1);
 	float v = float(y) / (screenHeight - 1);
@@ -126,7 +138,7 @@ glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
 			closest = rec.t;
 
 			glm::vec3 totalLightRGB(0.0f);
-			for (auto& lightningSegment : lightningSegments) {
+			for (auto& lightningSegment : segs) {
 				// Use the light attached to every lightning segment
 				auto& light = *(lightningSegment->lightSource);
 
@@ -155,7 +167,7 @@ glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
 	}
 
 	// Test ray against lightning segments
-	for (auto& seg : lightningSegments) {
+	for (auto& seg : segs) {
 		if (seg->hit(r, 0.001f, closest, rec)) {
 			closest = rec.t;
 
@@ -167,7 +179,7 @@ glm::vec3 ofApp::tracePixel(int x, int y, int frame) {
 
 	if (closest == 1e20f) {
 		glm::vec3 glowTotal(0.0f);
-		for (const auto & seg : lightningSegments) {
+		for (const auto & seg : segs) {
 			float glow = seg->computeGlowForRay(r);
 			glowTotal += glm::vec3(1.0f) * glow;
 		}
