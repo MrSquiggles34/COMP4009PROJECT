@@ -1,5 +1,8 @@
 #include "ofApp.h"
 #include <filesystem>
+#include <glm/gtc/random.hpp>
+
+
 
 //--------------------------------------------------------------
 void ofApp::setup() {
@@ -14,6 +17,8 @@ void ofApp::setup() {
 	// Set values
 	screenWidth = ofGetWidth();
 	screenHeight = ofGetHeight();
+
+
 	cam = Camera();
 
 	// Reposition camera
@@ -24,6 +29,7 @@ void ofApp::setup() {
 	world.push_back(std::make_shared<Sphere>(glm::vec3(0, 0, -1), 0.5f, glm::vec3(1.0f, 0.5f, 0.0f)));
 	world.push_back(std::make_shared<Cylinder>(glm::vec3(2.0f, 2.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(0.0, 0.0, 1.0)));
 	world.push_back(std::make_shared<Cylinder>(glm::vec3(-3.0f, 3.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(1.0, 0.0, 0.5)));
+
 
 	// Generate the strike
 	glm::vec3 start(0, -1.5, 0);
@@ -136,48 +142,117 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 	float u = x / (screenWidth - 1);
 	float v = y / (screenHeight - 1);
 
-	Ray r = cam.getRay(u, v);
+    const int SAMPLES_PER_LIGHT = 8;  // fewer samples for faster real-time, increase for smoother shadows
+    const float EPS = 0.001f;
 
-	hit_record rec;
-	float closest = 1e20f; // Infinity
+    float u = float(x) / (screenWidth - 1);
+    float v = float(y) / (screenHeight - 1);
 
-	// Set the background
-	glm::vec3 background(0.0f, 0.0f, 0.0f);
-	glm::vec3 pixelColor = background;
+    Ray r = cam.getRay(u, v);
 
-	// Test for ray-object intersections
-	for (auto& obj : world) {
-		if (obj->hit(r, 0.001f, closest, rec)) {
-			closest = rec.t;
+    hit_record rec;
+    float closest = 1e20f;
 
-			glm::vec3 totalLightRGB(0.0f);
-			for (auto& lightningSegment : segs) {
-				// Use the light attached to every lightning segment
-				auto& light = *(lightningSegment->lightSource);
+    glm::vec3 background(0.0f);
+    glm::vec3 pixelColor = background;
 
-				glm::vec3 L = light.position - rec.p;
-				float dist2 = glm::dot(L, L);
-				float dist = sqrt(dist2);
-				if (dist < 1e-4f) continue;
-				glm::vec3 lightDir = glm::normalize(L);
+    // 1. OBJECT INTERSECTION 
+    bool hitAnything = false;
+    for (auto& obj : world) {
+        if (obj->hit(r, EPS, closest, rec)) {
+            closest = rec.t;
+            hitAnything = true;
+        }
+    }
 
-				// Lambertian diffuse
-				float diff = glm::max(glm::dot(rec.normal, lightDir), 0.0f);
+    if (hitAnything) {
+        // Immediate return if the object is emissive
+        if (rec.emissive) {
+            return glm::clamp(rec.emissionColor, 0.0f, 1.0f);
+        }
 
-				totalLightRGB += glm::vec3(diff);
-			}
+        glm::vec3 totalLightRGB(0.0f);
 
-			// Ambient (base)
-			glm::vec3 ambient = 0.1f * rec.color;
+        for (auto& lightningSegment : lightningSegments) {
+            if (!lightningSegment->isEmissive()) continue;
+            auto& light = *(lightningSegment->lightSource);
 
-			float brightness = glm::clamp(totalLightRGB.r, 0.0f, 0.9f);
-			glm::vec3 diffuse = rec.color * brightness;
-			pixelColor = ambient + diffuse;
+            glm::vec3 totalSampleColor(0.0f);
 
-			// final clamp
-			pixelColor = glm::clamp(pixelColor, glm::vec3(0.0f), glm::vec3(1.0f));
-		}
-	}
+            glm::vec3 segStart = lightningSegment->startPoint;
+            glm::vec3 segVec = lightningSegment->endPoint - lightningSegment->startPoint;
+
+            for (int s = 0; s < SAMPLES_PER_LIGHT; s++) {
+                float tSample = glm::linearRand(0.0f, 1.0f);
+                glm::vec3 samplePos = segStart + tSample * segVec;
+
+            
+                if (light.radius > 0.0f) {
+                    glm::vec3 jitter = glm::sphericalRand(light.radius * 0.5f);
+                    samplePos += jitter;
+                }
+
+                glm::vec3 L = samplePos - rec.p;
+                float dist2 = glm::dot(L, L);
+                float dist = sqrt(dist2);
+                if (dist <= 0.0f) continue;
+                glm::vec3 lightDir = L / dist;
+
+                
+                if (glm::dot(lightDir, rec.normal) <= 0.0f) continue;
+
+                Ray shadow(rec.p + rec.normal * EPS, lightDir);
+
+                bool inShadow = false;
+                hit_record shadowRec;
+
+                
+                for (auto& obj2 : world) {
+                    if (obj2->hit(shadow, EPS, dist - EPS, shadowRec)) {
+                        inShadow = true;
+                        break;
+                    }
+                }
+                if (inShadow) continue;
+
+                
+                for (auto& otherSeg : lightningSegments) {
+                    if (otherSeg.get() == lightningSegment.get()) continue;
+                    if (otherSeg->hit(shadow, EPS, dist - EPS, shadowRec)) {
+                        inShadow = true;
+                        break;
+                    }
+                }
+                if (inShadow) continue;
+
+                // Lambertian shading
+                float nDotL = glm::max(glm::dot(rec.normal, lightDir), 0.0f);
+                float attenuation = light.intensity / (dist2 + 1e-4f);
+
+                totalSampleColor += (light.color * attenuation) * nDotL;
+            }
+
+            totalSampleColor /= float(SAMPLES_PER_LIGHT);
+            totalLightRGB += totalSampleColor;
+        }
+
+        glm::vec3 ambient = 0.05f * rec.color;  // reduced ambient to make shadows visible
+        glm::vec3 diffuse = rec.color * totalLightRGB;
+        pixelColor = glm::clamp(ambient + diffuse, 0.0f, 1.0f);
+    }
+
+    // 2. LIGHTNING BOLT HIT TEST
+    for (auto& seg : lightningSegments) {
+        hit_record lrec;
+        if (seg->hit(r, EPS, closest, lrec)) {
+            if (seg->isEmissive() && seg->lightSource) {
+                glm::vec3 emitted = seg->lightSource->color * seg->lightSource->intensity;
+                return glm::clamp(emitted, 0.0f, 1.0f);
+            } else {
+                return glm::clamp(lrec.color, 0.0f, 1.0f);
+            }
+        }
+    }
 
 	// Test ray against lightning segments
 	for (auto& seg : segs) {
@@ -199,8 +274,9 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 		pixelColor = glowTotal;
 	}
 
-	return pixelColor;
+    return pixelColor;
 }
+
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key) {
