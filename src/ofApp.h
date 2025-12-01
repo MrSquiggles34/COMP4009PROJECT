@@ -28,7 +28,7 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
 
 		// The Raytracing Algorithm
-		glm::vec3 tracePixel(int x, int y, int frame, const std::vector<std::shared_ptr<LightningSegment>>& segs);
+		glm::vec3 tracePixel(float x, float y, int frame, const std::vector<std::shared_ptr<LightningSegment>>& segs);
 		
 		// Objects
 		ofShader basic;
@@ -46,6 +46,6 @@ class ofApp : public ofBaseApp{
 		int screenWidth;
 		int screenHeight;
 		int frameCount = 0;
-		int totalFrames = 60; // 2 seconds at 30 fps
+		int totalFrames = 24; // 1 seconds at 24 fps
 
 };
