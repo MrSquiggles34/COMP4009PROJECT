@@ -52,7 +52,7 @@ void ofApp::setup() {
 void ofApp::update() {
 	// Reveal one more lightning segment per frame
 	if (segmentsToShow < lightningSegments.size()) {
-		segmentsToShow += 3;
+		segmentsToShow += 6;
 	}
 
 	// Establish a unit of time for animations
@@ -69,9 +69,22 @@ void ofApp::draw(){
 		lightningSegments.begin() + segmentsToShow
 	);
 
+	// Raytracing with anti-aliasing
+	int samples = 4;
 	for (int y = 0; y < screenHeight; y++) {
 		for (int x = 0; x < screenWidth; x++) {
-			glm::vec3 color = tracePixel(x, y, frameCount, activeSegments);
+			
+			// sample many points fir a pixel
+			glm::vec3 accumulated(0.0f);
+
+			for (int s = 0; s < samples; s++) {
+				float u = x + ofRandom(0, 1);
+				float v = y + ofRandom(0, 1);
+
+				accumulated += tracePixel(u, v, frameCount, activeSegments);
+			}
+
+			glm::vec3 color = accumulated / float(samples);
 			color = glm::clamp(color, 0.0f, 1.0f);
 			pixels.setColor(x, y, ofColor(color.r * 255, color.g * 255, color.b * 255));
 		}
@@ -115,13 +128,13 @@ void ofApp::draw(){
 	// Batch script
 	// Run this (on windows) with ffmpeg to generate a video using the frames
 	// https://ffmpeg.org/download.html
-	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 30 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
+	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 24 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
 }
 
-glm::vec3 ofApp::tracePixel(int x, int y, int frame, const std::vector<std::shared_ptr<LightningSegment>>& segs) {
+glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::shared_ptr<LightningSegment>>& segs) {
 	(void)frame; 
-	float u = float(x) / (screenWidth - 1);
-	float v = float(y) / (screenHeight - 1);
+	float u = x / (screenWidth - 1);
+	float v = y / (screenHeight - 1);
 
 	Ray r = cam.getRay(u, v);
 
