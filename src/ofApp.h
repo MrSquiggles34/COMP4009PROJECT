@@ -7,6 +7,7 @@
 #include "lightsource.h"
 #include "lightningSegment.h"
 #include "branch.h"
+#include "Plane.h"
 
 class ofApp : public ofBaseApp{
 
