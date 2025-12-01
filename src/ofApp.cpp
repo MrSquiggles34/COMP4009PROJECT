@@ -142,11 +142,8 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 	float u = x / (screenWidth - 1);
 	float v = y / (screenHeight - 1);
 
-    const int SAMPLES_PER_LIGHT = 8;  // fewer samples for faster real-time, increase for smoother shadows
+    const int SAMPLES_PER_LIGHT = 4;  // adjust for speed / accuracy
     const float EPS = 0.001f;
-
-    float u = float(x) / (screenWidth - 1);
-    float v = float(y) / (screenHeight - 1);
 
     Ray r = cam.getRay(u, v);
 
@@ -173,7 +170,7 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 
         glm::vec3 totalLightRGB(0.0f);
 
-        for (auto& lightningSegment : lightningSegments) {
+        for (auto& lightningSegment : segs) {
             if (!lightningSegment->isEmissive()) continue;
             auto& light = *(lightningSegment->lightSource);
 
@@ -216,7 +213,7 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
                 if (inShadow) continue;
 
                 
-                for (auto& otherSeg : lightningSegments) {
+                for (auto& otherSeg : segs) {
                     if (otherSeg.get() == lightningSegment.get()) continue;
                     if (otherSeg->hit(shadow, EPS, dist - EPS, shadowRec)) {
                         inShadow = true;
@@ -242,7 +239,7 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
     }
 
     // 2. LIGHTNING BOLT HIT TEST
-    for (auto& seg : lightningSegments) {
+    for (auto& seg : segs) {
         hit_record lrec;
         if (seg->hit(r, EPS, closest, lrec)) {
             if (seg->isEmissive() && seg->lightSource) {
