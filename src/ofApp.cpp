@@ -26,7 +26,7 @@ void ofApp::setup() {
 	cam.lowerLeft = cam.camera_center - cam.horizontal / 2.0f - cam.vertical / 2.0f - glm::vec3(0, 0, cam.focalLength);
 
 	// Fill the scene
-	world.push_back(std::make_shared<Sphere>(glm::vec3(0, 0, -1), 0.5f, glm::vec3(1.0f, 0.5f, 0.0f)));
+	world.push_back(std::make_shared<Sphere>(glm::vec3(0, -2.0f, -1), 0.5f, glm::vec3(0.2f, 0.02f, 0.02f)));
 	//world.push_back(std::make_shared<Cylinder>(glm::vec3(2.0f, 2.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(0.0, 0.0, 1.0)));
 	//world.push_back(std::make_shared<Cylinder>(glm::vec3(-3.0f, 3.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(1.0, 0.0, 0.5)));
 	
@@ -351,14 +351,13 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 		}
 	}
 
-	if (closest == 1e20f) {
-		glm::vec3 glowTotal(0.0f);
-		for (const auto & seg : segs) {
-			float glow = seg->computeGlowForRay(r);
-			glowTotal += glm::vec3(1.0f) * glow;
-		}
-		pixelColor = glowTotal;
+	// Add glow from all lightning segments, always (regardless of occlusion)
+	glm::vec3 glowTotal(0.0f);
+	for (const auto & seg : segs) {
+		float glow = seg->computeGlowForRay(r); // Remove closest!
+		glowTotal += glm::vec3(1.0f) * glow;
 	}
+	pixelColor += glowTotal;
 
     return pixelColor;
 }

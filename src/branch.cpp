@@ -108,8 +108,8 @@ void Branch::generateBranch() {
 }
 
 float LightningSegment::computeGlow(const glm::vec3 & samplePoint) const {
-	float g = 1.5f;
-	float li = 4.0f;
+	float g = 0.75f;
+	float li = 2.0f;
 	float W = std::max(radius * 12.0f, 0.15f);
 
 	glm::vec3 segVec = endPoint - startPoint;
@@ -166,8 +166,8 @@ float LightningSegment::minDistanceToSegment(const Ray & r) const {
 }
 
 float LightningSegment::computeGlowForRay(const Ray & r) const {
-	float g = 0.08f;
-	float li = 4.0f;
+	float g = 0.04f;
+	float li = 2.0f;
 	float W = std::max(radius * 3.0f, 0.08f);
 
 	float di = minDistanceToSegment(r);
