@@ -21,7 +21,7 @@ void ofApp::setup() {
 	cam = Camera();
 
 	// Reposition camera
-	cam.camera_center = glm::vec3(0, 0, 3.0f);
+	cam.camera_center = glm::vec3(0, 0, 2.5f);
 	cam.lowerLeft = cam.camera_center - cam.horizontal / 2.0f - cam.vertical / 2.0f - glm::vec3(0, 0, cam.focalLength);
 
 	// Fill the scene
@@ -142,6 +142,7 @@ void ofApp::draw(){
 
 	// Intitiate threads
 	auto t0 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> timeTotal;
 	std::vector<std::thread> workers;
 	workers.reserve(threadBufs.size());
 
@@ -205,6 +206,7 @@ void ofApp::draw(){
     // Timing and logging
     auto t1 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> took = t1 - t0;
+	timeTotal += took;
     ofLog() << "Render took " << (took.count() * 1000.0) << " ms (threads=" << numThreads << ", samples=" << samples << ")";
 
     // Save the images to a folder named 'out'
@@ -241,6 +243,7 @@ void ofApp::draw(){
     segmentsToShow += 6;
 
 	if (frameCount >= totalFrames) {
+        ofLog() << "IN TOTAL Render took " << (timeTotal.count() * 1000.0) << " ms (threads=" << numThreads << ", samples=" << samples << ")";
 		ofExit();
 	}
 

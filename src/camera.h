@@ -13,7 +13,7 @@ public:
     // Some hard-coded camera values
     double focalLength = 1.0f;
     double viewportHeight = 2.0f;
-    double aspectRatio = 16.0f / 9.0f;
+    double aspectRatio = 7.0f / 9.0f;
 
     Camera() {
         double viewportWidth = aspectRatio * viewportHeight;
