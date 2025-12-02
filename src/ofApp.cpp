@@ -367,17 +367,6 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
         }
     }
 
-	// Test ray against lightning segments
-	for (auto& seg : segs) {
-		if (seg->hit(r, 0.001f, closest, rec)) {
-			closest = rec.t;
-
-			glm::vec3 baseColor = glm::vec3(1.0f, 1.0f, 1.0f); 
-
-			pixelColor = baseColor;
-		}
-	}
-
 	// Add glow from all lightning segments, always (regardless of occlusion)
 	glm::vec3 glowTotal(0.0f);
 	for (const auto & seg : segs) {
