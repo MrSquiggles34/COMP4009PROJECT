@@ -12,7 +12,8 @@ Branch::Branch(
     float maxSegAngle,
     float meanSegLen,
     float maxBrAngle,
-    glm::vec3 normal)
+    glm::vec3 normal,
+    bool mainBranch)
     :
     startingPos(start),
     direction(glm::normalize(dir)),
@@ -23,7 +24,8 @@ Branch::Branch(
     maxSegmentAngle(maxSegAngle),
     meanSegmentLength(meanSegLen),
     maxBranchAngle(maxBrAngle),
-    rotationNormal(glm::normalize(normal))
+    rotationNormal(glm::normalize(normal)),
+	isMainBranch(mainBranch)
 { }
 
 // Recursively generate another branch
@@ -88,7 +90,9 @@ void Branch::generateBranch() {
                 maxSegmentAngle * 1.3,
                 meanSegmentLength,
                 maxBranchAngle,
-                rotationNormal);
+                rotationNormal,
+                false
+            );
 
             child.generateBranch();
 
@@ -101,9 +105,11 @@ void Branch::generateBranch() {
         last = next;
 
         // Shrink the radius of this branch as it grows
-        radius -= 0.01f;
-        if (radius < 0.01f)
-            radius = 0.01f;
+        if (!isMainBranch) {
+            radius -= 0.001f;
+            if (radius < 0.01f)
+                radius = 0.01f;
+        }
     }
 }
 
@@ -168,11 +174,11 @@ float LightningSegment::minDistanceToSegment(const Ray & r) const {
 float LightningSegment::computeGlowForRay(const Ray & r) const {
 	float g = 0.04f;
 	float li = 2.0f;
-	float W = std::max(radius * 3.0f, 0.08f);
+	float W = std::max(radius * 5.0f, 0.08f);
 
 	float di = minDistanceToSegment(r);
 
 	float glow = g * li * expf(-powf(di / W, 2.0f));
-
+    glow = glow * radius * 50.0f;
 	return glow;
 }

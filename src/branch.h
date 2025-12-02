@@ -20,6 +20,8 @@ public:
 
     glm::vec3 rotationNormal;
 
+	bool isMainBranch = false;
+
     // Output a list of generated segments
     std::vector<std::shared_ptr<LightningSegment>> segments;
 
@@ -33,7 +35,8 @@ public:
         float maxSegAngle,
         float meanSegLen,
         float maxBrAngle,
-        glm::vec3 rotNormal
+        glm::vec3 rotNormal,
+        bool isMainBranch
     );
 
     void generateBranch();

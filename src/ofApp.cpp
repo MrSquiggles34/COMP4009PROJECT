@@ -69,12 +69,14 @@ void ofApp::setup() {
 		dir,
         glm::distance(start, target),      // distance to target
 		0.05f,        // radius
-		0.2f,       // branch probability
+		0.3f,       // branch probability
 		0.8f,       // mean branch length
 		30.0f,       // max segment angle
 		0.08f,        // mean segment length
 		50.0f,       // max branch angle
-		glm::vec3(0, 0, 1));
+		glm::vec3(0, 0, 1),
+        true
+    );
 	mainBranch.generateBranch();
 
 	// Copy the segments
@@ -240,7 +242,7 @@ void ofApp::draw(){
 
 	ofSaveImage(pixels, savePath.string());
 	frameCount++;
-    segmentsToShow += 6;
+    segmentsToShow += 3;
 
 	if (frameCount >= totalFrames) {
         ofLog() << "IN TOTAL Render took " << (timeTotal.count() * 1000.0) << " ms (threads=" << numThreads << ", samples=" << samples << ")";
