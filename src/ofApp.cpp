@@ -56,46 +56,128 @@ void ofApp::setup() {
 
 //--------------------------------------------------------------
 void ofApp::update() {
-	// Reveal one more lightning segment per frame
-	if (segmentsToShow < lightningSegments.size()) {
-		segmentsToShow += 6;
-	}
-
-	// Establish a unit of time for animations
-	float frameTime = 1.0f / 30.0f; // Time per frame
+	// Unit of time for animations
+	float frameTime = 1.0f / 24.0f; // Time per frame
 	float elapsedTime = frameCount * frameTime; // Time since start
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-
-	// Limit segments visible this frame
-	std::vector<std::shared_ptr<LightningSegment>> activeSegments(
-		lightningSegments.begin(),
-		lightningSegments.begin() + segmentsToShow
-	);
-
-	// Raytracing with anti-aliasing
-	int samples = 4;
-	for (int y = 0; y < screenHeight; y++) {
-		for (int x = 0; x < screenWidth; x++) {
-			
-			// sample many points fir a pixel
-			glm::vec3 accumulated(0.0f);
-
-			for (int s = 0; s < samples; s++) {
-				float u = x + ofRandom(0, 1);
-				float v = y + ofRandom(0, 1);
-
-				accumulated += tracePixel(u, v, frameCount, activeSegments);
-			}
-
-			glm::vec3 color = accumulated / float(samples);
-			color = glm::clamp(color, 0.0f, 1.0f);
-			pixels.setColor(x, y, ofColor(color.r * 255, color.g * 255, color.b * 255));
-		}
+	// Set visible segments to max if exceeded
+    if (segmentsToShow > (int)lightningSegments.size())
+    {
+        segmentsToShow = (int)lightningSegments.size();
+    }
+	
+    // Set the number of visible segments
+	std::vector<std::shared_ptr<LightningSegment>> activeSegments;
+	if (segmentsToShow > 0) {
+		activeSegments.assign(lightningSegments.begin(), lightningSegments.begin() + segmentsToShow);
 	}
 
+    // Set threads count, each gets a portion of the screen split horizontally
+	int numThreads = std::thread::hardware_concurrency();
+	if (numThreads < 0) numThreads = 8;
+	int rowsPerThread = screenHeight / numThreads;
+
+	// Store the pixel data required for each thread
+	struct ThreadBuf { int yStart, yEnd; std::vector<ofColor> buf; };
+	std::vector<ThreadBuf> threadBufs;
+	threadBufs.reserve(numThreads);
+
+    // Fit thread buffer size
+	int y = 0;
+	for (int t = 0; t < numThreads; ++t) {
+		// Set the beginning, end, and rows
+        int yStart = y;
+        int yEnd; 
+        if (t == numThreads - 1) {
+            yEnd = screenHeight;
+        }
+        else {
+            yEnd = yStart + rowsPerThread;
+        }
+		int rows = yEnd - yStart;
+		
+        ThreadBuf tb;
+		tb.yStart = yStart; 
+        tb.yEnd = yEnd;
+		tb.buf.resize(rows * screenWidth);
+		threadBufs.push_back(std::move(tb));
+		y = yEnd;
+	}
+
+	// Anti-aliasing samples
+	int samples = 4;
+
+	// Intitiate threads
+	auto t0 = std::chrono::high_resolution_clock::now();
+	std::vector<std::thread> workers;
+	workers.reserve(threadBufs.size());
+
+	// Count the threads
+    for (size_t tid = 0; tid < threadBufs.size(); ++tid) {
+        workers.emplace_back([&, tid]() {
+            // thread-local RNG
+            thread_local std::mt19937 rng((unsigned)std::hash<std::thread::id>()(std::this_thread::get_id()) ^ (unsigned)time(nullptr));
+            std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+            // Retrieve the buffer and raytrace
+            ThreadBuf& tb = threadBufs[tid];
+            int yStart = tb.yStart;
+            int yEnd = tb.yEnd;
+            auto& localBuf = tb.buf;
+
+            int rowCount = yEnd - yStart;
+            for (int yy = yStart; yy < yEnd; ++yy) {
+                for (int xx = 0; xx < screenWidth; ++xx) {
+                    // Randomize and accumulate samples
+                    glm::vec3 accumulated(0.0f);
+                    for (int s = 0; s < samples; ++s) {
+                        float ux = xx + dist(rng);
+                        float vy = yy + dist(rng);
+
+                        accumulated += tracePixel(ux, vy, frameCount, activeSegments);
+                    }
+
+                    glm::vec3 color = accumulated / float(samples);
+                    color = glm::clamp(color, 0.0f, 1.0f);
+
+                    // store into local buffer (row-major)
+                    int localRow = yy - yStart;
+                    int idx = localRow * screenWidth + xx;
+                    localBuf[idx] = ofColor(
+                        (unsigned char)(color.r * 255.0f),
+                        (unsigned char)(color.g * 255.0f),
+                        (unsigned char)(color.b * 255.0f));
+                }
+            }
+            });
+    }
+
+    // Join threads
+    for (auto& w : workers) w.join();
+
+    // Copy thread buffers into shared pixels on main thread
+    for (const auto& tb : threadBufs) {
+        int yStart = tb.yStart;
+        int yEnd = tb.yEnd;
+        const auto& localBuf = tb.buf;
+        for (int yy = yStart; yy < yEnd; ++yy) {
+            int localRow = yy - yStart;
+            for (int xx = 0; xx < screenWidth; ++xx) {
+                int idx = localRow * screenWidth + xx;
+                pixels.setColor(xx, yy, localBuf[idx]);
+            }
+        }
+    }
+
+    // Timing and logging
+    auto t1 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> took = t1 - t0;
+    ofLog() << "Render took " << (took.count() * 1000.0) << " ms (threads=" << numThreads << ", samples=" << samples << ")";
+
+    // Save the images to a folder named 'out'
 	namespace fs = std::filesystem;
 	fs::path cwd = fs::current_path();
 	fs::path search = cwd;
@@ -126,6 +208,7 @@ void ofApp::draw(){
 
 	ofSaveImage(pixels, savePath.string());
 	frameCount++;
+    segmentsToShow += 6;
 
 	if (frameCount >= totalFrames) {
 		ofExit();
