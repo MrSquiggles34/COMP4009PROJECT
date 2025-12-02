@@ -38,6 +38,7 @@ class ofApp : public ofBaseApp{
 
 		// Scene Data structures
 		std::vector<std::shared_ptr<hittable>> world;
+		std::vector<std::shared_ptr<Sphere>> strikeTargets;
 		std::vector<LightSource> lightSources;
 		std::vector<std::shared_ptr<LightningSegment>> lightningSegments;
 		int segmentsToShow = 0;
