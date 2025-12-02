@@ -18,17 +18,28 @@ void ofApp::setup() {
 	screenWidth = ofGetWidth();
 	screenHeight = ofGetHeight();
 
-
 	cam = Camera();
 
 	// Reposition camera
-	cam.camera_center = glm::vec3(0, 0, 2.0f);
+	cam.camera_center = glm::vec3(0, 0, 3.0f);
 	cam.lowerLeft = cam.camera_center - cam.horizontal / 2.0f - cam.vertical / 2.0f - glm::vec3(0, 0, cam.focalLength);
 
 	// Fill the scene
-	world.push_back(std::make_shared<Sphere>(glm::vec3(0, -2.0f, -1), 0.5f, glm::vec3(0.2f, 0.02f, 0.02f)));
-	//world.push_back(std::make_shared<Cylinder>(glm::vec3(2.0f, 2.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(0.0, 0.0, 1.0)));
-	//world.push_back(std::make_shared<Cylinder>(glm::vec3(-3.0f, 3.0, -5.0f), 2.0f, 1.0f, glm::vec3(0.2f, 0.8f, 1.0f), glm::vec3(1.0, 0.0, 0.5)));
+    // seed openFrameworks random
+    std::srand((unsigned int)time(nullptr)); 
+    ofSeedRandom(std::rand()); 
+    for (int i = 0; i < 3; i++) {
+        float x = glm::linearRand(-1.0f, 1.0f);
+        float z = glm::linearRand(-0.5f, 0.5f);
+        float y = glm::linearRand(1.3f, 1.7f); 
+        float r = glm::linearRand(0.1f, 0.3f);
+
+        glm::vec3 color = glm::vec3(ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f));
+
+        auto s = std::make_shared<Sphere>(glm::vec3(x, y, z), r, color);
+        world.push_back(s);
+        strikeTargets.push_back(s);
+    }
 	
 	//Adding the ground to the scene.
 	world.push_back(std::make_shared<Plane>(
@@ -37,13 +48,26 @@ void ofApp::setup() {
 		glm::vec3(0.3f, 0.35f, 0.4f)  
 	));
 
+    // Find the tallest sphere
+    std::shared_ptr<Sphere> tallest = nullptr;
+    float maxHeight = -1e9;
+
+    for (auto& s : strikeTargets) {
+        float top = s->center.y + s->radius;
+        if (top > maxHeight) {
+            maxHeight = top;
+            tallest = s;
+        }
+    }
+
 	// Generate the strike
-	glm::vec3 start(0, -1.5, 0);
-	glm::vec3 dir(0, 1, 0);  // pointing downward!!!
+	glm::vec3 start(0, -2.5, 0);
+    glm::vec3 target = tallest->center + glm::vec3(0, tallest->radius, 0);
+    glm::vec3 dir = glm::normalize(target - start);
 
 	Branch mainBranch(start,
 		dir,
-		3.0f,      // distance
+        glm::distance(start, target),      // distance to target
 		0.05f,        // radius
 		0.2f,       // branch probability
 		0.8f,       // mean branch length
