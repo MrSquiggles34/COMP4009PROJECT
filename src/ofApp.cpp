@@ -375,14 +375,13 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 		}
 	}
 
-	if (closest == 1e20f) {
-		glm::vec3 glowTotal(0.0f);
-		for (const auto & seg : segs) {
-			float glow = seg->computeGlowForRay(r);
-			glowTotal += glm::vec3(1.0f) * glow;
-		}
-		pixelColor = glowTotal;
+	// Add glow from all lightning segments, always (regardless of occlusion)
+	glm::vec3 glowTotal(0.0f);
+	for (const auto & seg : segs) {
+		float glow = seg->computeGlowForRay(r); // Remove closest!
+		glowTotal += glm::vec3(1.0f) * glow;
 	}
+	pixelColor += glowTotal;
 
     return pixelColor;
 }

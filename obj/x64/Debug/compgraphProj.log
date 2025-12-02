@@ -1,0 +1,8 @@
+﻿  Scanning sources for module dependencies...
+  branch.cpp
+  ofApp.cpp
+LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/FORCE' specification
+     Creating library bin\compgraphProj_debug.lib and object bin\compgraphProj_debug.exp
+  compgraphProj.vcxproj -> C:\Users\igytm\OneDrive\Desktop\openframeworks\of_v0.12.1_vs_64_release\apps\myApps\compgraphProj\bin\compgraphProj_debug.exe
+  File not found - *.dll
+  0 File(s) copied
