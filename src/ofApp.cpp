@@ -373,8 +373,9 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 	glm::vec3 glowTotal(0.0f);
 	for (const auto & seg : segs) {
 		float glow = seg->computeGlowForRay(r); // Remove closest!
-		glowTotal += glm::vec3(1.0f) * glow;
+		glowTotal += glm::vec3(0.6f, 0.8f, 1.0f) * glow;
 	}
+	glowTotal = glm::min(glowTotal, glm::vec3(1.5f));
 	pixelColor += glowTotal;
 
     return pixelColor;
