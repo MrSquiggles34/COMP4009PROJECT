@@ -28,25 +28,24 @@ void ofApp::setup() {
     // seed openFrameworks random
     std::srand((unsigned int)time(nullptr)); 
     ofSeedRandom(std::rand()); 
-    for (int i = 0; i < 3; i++) {
-        float x = glm::linearRand(-1.0f, 1.0f);
-        float z = glm::linearRand(-0.5f, 0.5f);
-        float y = glm::linearRand(1.3f, 1.7f); 
-        float r = glm::linearRand(0.1f, 0.3f);
 
-        glm::vec3 color = glm::vec3(ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f));
+    float x = glm::linearRand(-1.0f, 1.0f);
+    float z = glm::linearRand(-0.5f, 0.5f);
+    float y = glm::linearRand(1.3f, 1.7f); 
+    float r = glm::linearRand(0.1f, 0.3f);
 
-        auto s = std::make_shared<Sphere>(glm::vec3(x, y, z), r, color);
-        world.push_back(s);
-        strikeTargets.push_back(s);
-    }
+    glm::vec3 color = glm::vec3(ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f));
+
+    auto s = std::make_shared<Sphere>(glm::vec3(x, y, z), r, color);
+    world.push_back(s);
+    strikeTargets.push_back(s);
 	
-	//Adding the ground to the scene.
-	world.push_back(std::make_shared<Plane>(
-		glm::vec3(0, 2, 0),
-		glm::vec3(0, -1, 0),
-		glm::vec3(0.3f, 0.35f, 0.4f)  
-	));
+	////Adding the ground to the scene.
+	//world.push_back(std::make_shared<Plane>(
+	//	glm::vec3(0, 2, 0),
+	//	glm::vec3(0, -1, 0),
+	//	glm::vec3(0.3f, 0.35f, 0.4f)  
+	//));
 
     // Find the tallest sphere
     std::shared_ptr<Sphere> tallest = nullptr;

@@ -85,7 +85,7 @@ void Branch::generateBranch() {
             // Gradually change segment properties with each call
             Branch child(next, branchDir, branchDist,
                 radius * 0.5f,  
-                branchProbability * 0.0f,
+                branchProbability * 0.2f,
                 meanBranchLength * 0.5,
                 maxSegmentAngle * 1.3,
                 meanSegmentLength,
