@@ -68,6 +68,7 @@ void Branch::generateBranch() {
             true,
             *lightPtr
         );
+        seg->isMainBranchSegment = isMainBranch; // <-- Set flag
 
 		seg->startPoint = start;
 		seg->endPoint = end;
@@ -85,7 +86,7 @@ void Branch::generateBranch() {
             // Gradually change segment properties with each call
             Branch child(next, branchDir, branchDist,
                 radius * 0.5f,  
-                branchProbability * 0.2f,
+                branchProbability * 0.4f,
                 meanBranchLength * 0.5,
                 maxSegmentAngle * 1.3,
                 meanSegmentLength,
@@ -170,13 +171,17 @@ float LightningSegment::minDistanceToSegment(const Ray & r) const {
 }
 
 float LightningSegment::computeGlowForRay(const Ray & r) const {
-	float g = 0.02f;
-	float li = 1.5f;
-	float W = std::max(radius * 8.0f, 0.12f);
+	float g = 0.05f;
+	float li = 2.0f;
+	float power = 2.0f;
+	float W_factor = isMainBranchSegment ? 2.0f : 0.8f;
+	float W = std::max(radius * 12.0f * W_factor, 0.15f);
 
 	float di = minDistanceToSegment(r);
 
-	float glow = g * li * expf(-powf(di / W, 2.5f));
-    glow = glow * radius * 30.0f;
+	float intensityScale = isMainBranchSegment ? 1.5f : 0.2f;
+
+	float glow = g * li * expf(-powf(di / W, power));
+	glow = glow * radius * 40.0f * intensityScale;
 	return glow;
 }
