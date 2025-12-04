@@ -139,7 +139,7 @@ void ofApp::draw(){
 	}
 
 	// Anti-aliasing samples
-	int samples = 4;
+	int samples = 1;
 
 	// Intitiate threads
 	auto t0 = std::chrono::high_resolution_clock::now();
@@ -241,7 +241,7 @@ void ofApp::draw(){
 
 	ofSaveImage(pixels, savePath.string());
 	frameCount++;
-    segmentsToShow += 3;
+    segmentsToShow += 100;
 
 	if (frameCount >= totalFrames) {
         ofLog() << "IN TOTAL Render took " << (timeTotal.count() * 1000.0) << " ms (threads=" << numThreads << ", samples=" << samples << ")";
@@ -369,14 +369,26 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
     }
 
 	glm::vec3 glowTotal(0.0f);
+
 	for (const auto & seg : segs) {
 		float glow = seg->computeGlowForRay(r);
-		glowTotal += glm::vec3(0.4f, 0.6f, 1.0f) * glow;
+
+		glm::vec3 aura = (seg->isMainBranchSegment ? glm::vec3(0.4f, 0.1f, 1.0f)
+												   : glm::vec3(0.6f, 0.2f, 1.0f))
+			* glow * (seg->isMainBranchSegment ? 1.5f : 0.7f);
+
+		glm::vec3 core = glm::vec3(1.0f, 0.95f, 1.0f) * glow
+			* (seg->isMainBranchSegment ? 0.4f : 0.2f);
+
+		// soft additive blend to avoid over-bright areas
+		glowTotal += (aura + core) * glm::exp(-glowTotal);
 	}
-	glowTotal = glm::min(glowTotal, glm::vec3(1.0f, 1.0f, 1.0f));
+
+	// tone-mapping
+	glowTotal = glm::pow(glowTotal, glm::vec3(0.6f));
+	glowTotal = glm::min(glowTotal, glm::vec3(1.0f, 0.95f, 1.0f));
 
 	pixelColor += glowTotal;
-
 	return pixelColor;
 }
 

@@ -1,4 +1,4 @@
-#include "branch.h"
+﻿#include "branch.h"
 #include "ofMath.h"     
 
 // Constructor
@@ -171,17 +171,32 @@ float LightningSegment::minDistanceToSegment(const Ray & r) const {
 }
 
 float LightningSegment::computeGlowForRay(const Ray & r) const {
-	float g = 0.05f;
-	float li = 2.0f;
-	float power = 2.0f;
-	float W_factor = isMainBranchSegment ? 2.0f : 0.8f;
-	float W = std::max(radius * 12.0f * W_factor, 0.15f);
+	float g = 0.08f; // base glow
+	float li = 1.2f;
+	float power = isMainBranchSegment ? 1.8f : 4.5f;
+	float W = std::max(radius * 18.0f * (isMainBranchSegment ? 2.5f : 0.3f), 0.12f);
 
-	float di = minDistanceToSegment(r);
+	float di = minDistanceToSegment(r); // distance ray ↔ segment
+	float intensityScale = isMainBranchSegment ? 1.2f : 0.04f;
 
-	float intensityScale = isMainBranchSegment ? 1.5f : 0.2f;
+	// closest point on segment (t-parameter)
+	glm::vec3 dir = endPoint - startPoint;
+	float len2 = glm::dot(dir, dir);
+	float t = 0.0f;
+	if (len2 > 0.0f) {
+		glm::vec3 d = glm::normalize(r.direction());
+		glm::vec3 rr = r.origin() - startPoint;
+		float denom = len2 - glm::dot(d, dir) * glm::dot(d, dir);
+		if (std::abs(denom) < 1e-6f)
+			t = glm::dot(rr, dir) / len2;
+		else
+			t = (glm::dot(rr, dir) - glm::dot(d, dir) * glm::dot(rr, d)) / denom;
+		t = glm::clamp(t, 0.0f, 1.0f);
+	}
+
+	// fade along length (brighter at base)
+	float fade = isMainBranchSegment ? (1.0f - 0.3f * t) : powf(1.0f - t, 1.5f);
 
 	float glow = g * li * expf(-powf(di / W, power));
-	glow = glow * radius * 40.0f * intensityScale;
-	return glow;
+	return glow * radius * 18.0f * intensityScale * fade;
 }
