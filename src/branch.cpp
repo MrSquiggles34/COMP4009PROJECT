@@ -1,4 +1,4 @@
-#include "branch.h"
+﻿#include "branch.h"
 #include "ofMath.h"     
 
 // Constructor
@@ -68,6 +68,7 @@ void Branch::generateBranch() {
             true,
             *lightPtr
         );
+        seg->isMainBranchSegment = isMainBranch; // <-- Set flag
 
 		seg->startPoint = start;
 		seg->endPoint = end;
@@ -85,7 +86,7 @@ void Branch::generateBranch() {
             // Gradually change segment properties with each call
             Branch child(next, branchDir, branchDist,
                 radius * 0.5f,  
-                branchProbability * 0.8,
+                branchProbability * 0.4f,
                 meanBranchLength * 0.5,
                 maxSegmentAngle * 1.3,
                 meanSegmentLength,
@@ -105,11 +106,9 @@ void Branch::generateBranch() {
         last = next;
 
         // Shrink the radius of this branch as it grows
-        if (!isMainBranch) {
-            radius -= 0.001f;
-            if (radius < 0.01f)
-                radius = 0.01f;
-        }
+        radius -= 0.0005f;
+        if (radius < 0.01f)
+            radius = 0.01f;
     }
 }
 
@@ -172,13 +171,32 @@ float LightningSegment::minDistanceToSegment(const Ray & r) const {
 }
 
 float LightningSegment::computeGlowForRay(const Ray & r) const {
-	float g = 0.04f;
-	float li = 2.0f;
-	float W = std::max(radius * 5.0f, 0.08f);
+	float g = 0.08f; // base glow
+	float li = 1.2f;
+	float power = isMainBranchSegment ? 1.8f : 4.5f;
+	float W = std::max(radius * 18.0f * (isMainBranchSegment ? 2.5f : 0.3f), 0.12f);
 
-	float di = minDistanceToSegment(r);
+	float di = minDistanceToSegment(r); // distance ray ↔ segment
+	float intensityScale = isMainBranchSegment ? 1.2f : 0.04f;
 
-	float glow = g * li * expf(-powf(di / W, 2.0f));
-    glow = glow * radius * 50.0f;
-	return glow;
+	// closest point on segment (t-parameter)
+	glm::vec3 dir = endPoint - startPoint;
+	float len2 = glm::dot(dir, dir);
+	float t = 0.0f;
+	if (len2 > 0.0f) {
+		glm::vec3 d = glm::normalize(r.direction());
+		glm::vec3 rr = r.origin() - startPoint;
+		float denom = len2 - glm::dot(d, dir) * glm::dot(d, dir);
+		if (std::abs(denom) < 1e-6f)
+			t = glm::dot(rr, dir) / len2;
+		else
+			t = (glm::dot(rr, dir) - glm::dot(d, dir) * glm::dot(rr, d)) / denom;
+		t = glm::clamp(t, 0.0f, 1.0f);
+	}
+
+	// fade along length (brighter at base)
+	float fade = isMainBranchSegment ? (1.0f - 0.3f * t) : powf(1.0f - t, 1.5f);
+
+	float glow = g * li * expf(-powf(di / W, power));
+	return glow * radius * 18.0f * intensityScale * fade;
 }

@@ -28,25 +28,24 @@ void ofApp::setup() {
     // seed openFrameworks random
     std::srand((unsigned int)time(nullptr)); 
     ofSeedRandom(std::rand()); 
-    for (int i = 0; i < 3; i++) {
-        float x = glm::linearRand(-1.0f, 1.0f);
-        float z = glm::linearRand(-0.5f, 0.5f);
-        float y = glm::linearRand(1.3f, 1.7f); 
-        float r = glm::linearRand(0.1f, 0.3f);
 
-        glm::vec3 color = glm::vec3(ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f));
+    float x = glm::linearRand(-1.0f, 1.0f);
+    float z = glm::linearRand(-0.5f, 0.5f);
+    float y = glm::linearRand(1.3f, 1.7f); 
+    float r = glm::linearRand(0.1f, 0.3f);
 
-        auto s = std::make_shared<Sphere>(glm::vec3(x, y, z), r, color);
-        world.push_back(s);
-        strikeTargets.push_back(s);
-    }
+    glm::vec3 color = glm::vec3(ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f));
+
+    auto s = std::make_shared<Sphere>(glm::vec3(x, y, z), r, color);
+    world.push_back(s);
+    strikeTargets.push_back(s);
 	
-	//Adding the ground to the scene.
-	world.push_back(std::make_shared<Plane>(
-		glm::vec3(0, 2, 0),
-		glm::vec3(0, -1, 0),
-		glm::vec3(0.3f, 0.35f, 0.4f)  
-	));
+	////Adding the ground to the scene.
+	//world.push_back(std::make_shared<Plane>(
+	//	glm::vec3(0, 2, 0),
+	//	glm::vec3(0, -1, 0),
+	//	glm::vec3(0.3f, 0.35f, 0.4f)  
+	//));
 
     // Find the tallest sphere
     std::shared_ptr<Sphere> tallest = nullptr;
@@ -140,7 +139,7 @@ void ofApp::draw(){
 	}
 
 	// Anti-aliasing samples
-	int samples = 4;
+	int samples = 1;
 
 	// Intitiate threads
 	auto t0 = std::chrono::high_resolution_clock::now();
@@ -242,7 +241,7 @@ void ofApp::draw(){
 
 	ofSaveImage(pixels, savePath.string());
 	frameCount++;
-    segmentsToShow += 3;
+    segmentsToShow += 100;
 
 	if (frameCount >= totalFrames) {
         ofLog() << "IN TOTAL Render took " << (timeTotal.count() * 1000.0) << " ms (threads=" << numThreads << ", samples=" << samples << ")";
@@ -369,15 +368,28 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
         }
     }
 
-	// Add glow from all lightning segments, always (regardless of occlusion)
 	glm::vec3 glowTotal(0.0f);
-	for (const auto & seg : segs) {
-		float glow = seg->computeGlowForRay(r); // Remove closest!
-		glowTotal += glm::vec3(1.0f) * glow;
-	}
-	pixelColor += glowTotal;
 
-    return pixelColor;
+	for (const auto & seg : segs) {
+		float glow = seg->computeGlowForRay(r);
+
+		glm::vec3 aura = (seg->isMainBranchSegment ? glm::vec3(0.4f, 0.1f, 1.0f)
+												   : glm::vec3(0.6f, 0.2f, 1.0f))
+			* glow * (seg->isMainBranchSegment ? 1.5f : 0.7f);
+
+		glm::vec3 core = glm::vec3(1.0f, 0.95f, 1.0f) * glow
+			* (seg->isMainBranchSegment ? 0.4f : 0.2f);
+
+		// soft additive blend to avoid over-bright areas
+		glowTotal += (aura + core) * glm::exp(-glowTotal);
+	}
+
+	// tone-mapping
+	glowTotal = glm::pow(glowTotal, glm::vec3(0.6f));
+	glowTotal = glm::min(glowTotal, glm::vec3(1.0f, 0.95f, 1.0f));
+
+	pixelColor += glowTotal;
+	return pixelColor;
 }
 
 

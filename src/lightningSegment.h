@@ -15,13 +15,15 @@ public:
         const glm::vec3& color,
         const glm::vec3& axis,
         bool hasEmission,
-        const LightSource& light
+        const LightSource& light,
+		bool isMainBranchSegment = false
     )
         : Cylinder(center, radius, height, color, axis),
           hasEmission(hasEmission),
           startPoint(center - glm::normalize(axis) * (height * 0.5f)),
           endPoint(center + glm::normalize(axis) * (height * 0.5f)),
-          lightSource(std::make_shared<LightSource>(light))
+          lightSource(std::make_shared<LightSource>(light)),
+          isMainBranchSegment(isMainBranchSegment)
     { }
 
     // Is it a light?
@@ -67,6 +69,8 @@ public:
 
         return true;
     }
+
+    bool isMainBranchSegment;
 };
 
 #endif
