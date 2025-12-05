@@ -8,6 +8,7 @@
 #include "lightningSegment.h"
 #include "branch.h"
 #include "Plane.h"
+#include "cloud.h"
 
 class ofApp : public ofBaseApp{
 
