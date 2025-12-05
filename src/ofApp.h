@@ -38,6 +38,7 @@ class ofApp : public ofBaseApp{
 		Camera cam;
 
 		// Scene Data structures
+		std::vector<Cloud> clouds;
 		std::vector<std::shared_ptr<hittable>> world;
 		std::vector<std::shared_ptr<Sphere>> strikeTargets;
 		std::vector<LightSource> lightSources;
