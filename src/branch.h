@@ -21,7 +21,7 @@ public:
     glm::vec3 rotationNormal;
 
 	bool isMainBranch = false;
-  bool mainBranchHit = false;
+    bool mainBranchHit = false;
 	int branchDepth = 0;
 
     // Output a list of generated segments

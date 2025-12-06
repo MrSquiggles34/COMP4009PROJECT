@@ -26,7 +26,7 @@ void ofApp::setup() {
 	// seed openFrameworks random
 	std::srand((unsigned int)time(nullptr)); 
 	ofSeedRandom(std::rand()); 
-	for (int i = 0; i < 1; ++i) {
+	for (int i = 0; i < 3; ++i) {
 		float x = glm::linearRand(-1.0f, 1.0f);
 		float z = glm::linearRand(-0.5f, 0.5f);
 		float y = glm::linearRand(1.3f, 1.7f);
@@ -40,11 +40,11 @@ void ofApp::setup() {
 	}
 
 	//Adding the ground to the scene.
-	//world.push_back(std::make_shared<Plane>(
-	//	glm::vec3(0, 2, 0),
-	//	glm::vec3(0, -1, 0),
-	//	glm::vec3(0.2f, 0.25f, 0.3f)  
-	//));
+	world.push_back(std::make_shared<Plane>(
+		glm::vec3(0, 2, 0),
+		glm::vec3(0, -1, 0),
+		glm::vec3(0.2f, 0.25f, 0.3f)  
+	));
 
 	// Find the tallest sphere
 	std::shared_ptr<Sphere> tallest = nullptr;
@@ -73,7 +73,8 @@ void ofApp::setup() {
 		0.08f,        // mean segment length
 		50.0f,       // max branch angle
 		glm::vec3(0, 0, 1),
-		true
+		true,
+		0
 	);
 
 	mainBranch.onMainBranchMove = [&](const glm::vec3& pos) {
@@ -126,7 +127,7 @@ void ofApp::draw(){
 	}
 
 	// Set threads count, each gets a portion of the screen split horizontally
-	int numThreads = std::thread::hardware_concurrency() * 1.5;
+	int numThreads = std::thread::hardware_concurrency() * 1.9;
 	if (numThreads < 0) numThreads = 8;
 	int rowsPerThread = screenHeight / numThreads;
 
@@ -158,7 +159,7 @@ void ofApp::draw(){
 	}
 
 	// Anti-aliasing samples
-	int samples = 1;
+	int samples = 4;
 	// WARNING : Hard coded 4 samples in the inner loop below, change there if modifying this value
 
 	// Intitiate threads
@@ -183,6 +184,24 @@ void ofApp::draw(){
 					// Randomize and accumulate 4 samples  unrolled THIS IS HARD CODED BUT REDUCED OVERHEAD
 					glm::vec3 accumulated(0.0f);
 					
+					{
+						float ux = xx + fastRand();
+						float vy = yy + fastRand();
+						accumulated += tracePixel(ux, vy, frameCount, activeSegments);
+					}
+
+					{
+						float ux = xx + fastRand();
+						float vy = yy + fastRand();
+						accumulated += tracePixel(ux, vy, frameCount, activeSegments);
+					}
+
+					{
+						float ux = xx + fastRand();
+						float vy = yy + fastRand();
+						accumulated += tracePixel(ux, vy, frameCount, activeSegments);
+					}
+
 					{
 						float ux = xx + fastRand();
 						float vy = yy + fastRand();
@@ -258,7 +277,7 @@ void ofApp::draw(){
 
 	ofSaveImage(pixels, savePath.string());
 	frameCount++;
-	segmentsToShow += 999;
+	segmentsToShow += 48;
 
 	if (frameCount >= totalFrames) {
 		ofLog() << "IN TOTAL Render took " << (timeTotal.count() * 1000.0) << " ms (threads=" << numThreads << ", samples=" << samples << ")";
@@ -268,7 +287,7 @@ void ofApp::draw(){
 	// Batch script
 	// Run this (on windows) with ffmpeg to generate a video using the frames
 	// https://ffmpeg.org/download.html
-	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 24 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
+	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 8 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
 }
 
 glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::shared_ptr<LightningSegment>> & segs) {

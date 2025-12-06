@@ -95,7 +95,8 @@ void Branch::generateBranch() {
                     meanSegmentLength,
                     maxBranchAngle,
                     rotationNormal,
-                    false
+                    false,
+                    branchDepth + 1
                 );
 
                 child.generateBranch();
