@@ -32,6 +32,11 @@ class ofApp : public ofBaseApp{
 		// The Raytracing Algorithm
 		glm::vec3 tracePixel(float x, float y, int frame, const std::vector<std::shared_ptr<LightningSegment>>& segs);
 		
+		// Random number generator state
+		uint32_t xorState = 123456789;
+		float fastRand();
+		uint32_t make_seed_for_current_thread();
+
 		// Objects
 		ofShader basic;
 		ofPixels pixels;
@@ -52,4 +57,6 @@ class ofApp : public ofBaseApp{
 		int frameCount = 0;
 		int totalFrames = 24; // 1 seconds at 24 fps
 
+		// Add this field to track if the main branch has hit a target
+		bool mainBranchHit = false;
 };
