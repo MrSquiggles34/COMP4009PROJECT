@@ -71,6 +71,7 @@ public:
     }
 
     bool isMainBranchSegment;
+	int branchDepth = 0;
 };
 
 #endif

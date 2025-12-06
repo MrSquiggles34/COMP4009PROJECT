@@ -1,4 +1,4 @@
-#include "ofApp.h"
+﻿#include "ofApp.h"
 #include <filesystem>
 #include <glm/gtc/random.hpp>
 
@@ -38,13 +38,12 @@ void ofApp::setup() {
 	world.push_back(s);
 	strikeTargets.push_back(s);
 
-	
 	//Adding the ground to the scene.
-	world.push_back(std::make_shared<Plane>(
+	/*world.push_back(std::make_shared<Plane>(
 		glm::vec3(0, 2, 0),
 		glm::vec3(0, -1, 0),
 		glm::vec3(0.2f, 0.25f, 0.3f)  
-	));
+	));*/
 
 	// Find the tallest sphere
 	std::shared_ptr<Sphere> tallest = nullptr;
@@ -73,8 +72,9 @@ void ofApp::setup() {
 		0.08f,        // mean segment length
 		50.0f,       // max branch angle
 		glm::vec3(0, 0, 1),
-		true
-	);
+        true,
+		0
+    );
 	mainBranch.generateBranch();
 
 	// Copy the segments
@@ -85,7 +85,7 @@ void ofApp::setup() {
 	clouds.push_back(Cloud(
 		glm::vec3(0.0f, -4.1f, -2.5f),
 		glm::vec3(18.0f, 4.0f, 14.0f),    
-		0.90f,                            
+		0.60f,                            
 		//glm::vec3(0.5f, 0.3565f, 0.378f)    
         glm::vec3(0.02f, 0.03f, 0.025f)   
 	));
@@ -262,12 +262,13 @@ void ofApp::draw(){
 	// C:\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe -framerate 24 -i out\output%05d.png -c:v libx264 -pix_fmt yuv420p out.mp4
 }
 
-glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::shared_ptr<LightningSegment>>& segs) {
-	(void)frame; 
+glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::shared_ptr<LightningSegment>> & segs) {
+	(void)frame;
 	float u = x / (screenWidth - 1);
 	float v = y / (screenHeight - 1);
 
-	const int SAMPLES_PER_LIGHT = 4;  // adjust for speed / accuracy
+	const int SAMPLES_PER_LIGHT = 4; // adjust for speed / accuracy
+
 	const float EPS = 0.001f;
 
 	Ray r = cam.getRay(u, v);
@@ -298,7 +299,6 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 		for (auto& lightningSegment : segs) {
 			if (!lightningSegment->isEmissive()) continue;
 			auto& light = *(lightningSegment->lightSource);
-
 			glm::vec3 totalSampleColor(0.0f);
 
 			glm::vec3 segStart = lightningSegment->startPoint;
@@ -354,36 +354,52 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 			totalLightRGB += totalSampleColor;
 		}
 
-
-
-		// Much lower ambient and diffuse for darker, less reflective ground
-		glm::vec3 ambient = 0.004f * rec.color;  // Very low ambient -> move to 0.005 if too low
-		glm::vec3 diffuse = rec.color * totalLightRGB * 0.09f;  // Reduced diffuse -> move to 0.10 if too low
+		glm::vec3 ambient = 0.004f * rec.color; // Very low ambient -> move to 0.005 if too low
+		glm::vec3 diffuse = rec.color * totalLightRGB * 0.09f; // Reduced diffuse -> move to 0.10 if too low
 		pixelColor = glm::clamp(ambient + diffuse, 0.0f, 1.0f);
 	}
-
-	// 2. LIGHTNING BOLT HIT TEST
-	for (auto& seg : segs) {
+	// 1. Lightning bolt hit test
+	for (auto & seg : segs) {
 		hit_record lrec;
 		if (seg->hit(r, EPS, closest, lrec)) {
 			if (seg->isEmissive() && seg->lightSource) {
-				glm::vec3 emitted = seg->lightSource->color * seg->lightSource->intensity;
-				
-				// Apply volumetric clouds if available
-				if (!clouds.empty()) {
-					glm::vec3 withClouds = renderVolume(r, clouds, lrec.t, emitted, segs);
-					return glm::clamp(withClouds, 0.0f, 1.0f);
+				float baseScale;
+				float depthFactor;
+				float fade;
+
+				if (seg->isMainBranchSegment) {
+					baseScale = 1.0f;
+					depthFactor = 1.0f;
+					fade = 1.0f;
+				} else if (seg->branchDepth == 1) {
+					baseScale = 0.3f;
+					depthFactor = 0.8f;
+					fade = 0.9f;
+				} else {
+					baseScale = 0.3f;
+					depthFactor = powf(0.6f, seg->branchDepth);
+					float t = glm::length(seg->midpoint() - seg->startPoint) / seg->length();
+					fade = powf(1.0f - t, 1.5f);
 				}
-				return glm::clamp(emitted, 0.0f, 1.0f);
+
+				float intensityScale = baseScale * fade * depthFactor;
+				glm::vec3 emitted = seg->lightSource->color * seg->lightSource->intensity * intensityScale;
+
+				pixelColor += emitted;
 			} else {
-				// Apply volumetric clouds if available
-				if (!clouds.empty()) {
-					glm::vec3 withClouds = renderVolume(r, clouds, lrec.t, lrec.color, segs);
-					return glm::clamp(withClouds, 0.0f, 1.0f);
-				}
-				return glm::clamp(lrec.color, 0.0f, 1.0f);
+				float t = glm::length(seg->midpoint() - seg->startPoint) / seg->length();
+				float fade = seg->isMainBranchSegment ? 1.0f : powf(1.0f - t, 1.5f);
+				float intensityScale = seg->isMainBranchSegment ? 1.0f : 0.1f * fade;
+				pixelColor += lrec.color * intensityScale;
 			}
 		}
+	}
+
+	if (!clouds.empty()) {
+		glm::vec3 withClouds = renderVolume(r, clouds, closest, pixelColor, segs);
+		pixelColor = glm::clamp(withClouds, 0.0f, 1.0f);
+	} else {
+		pixelColor = glm::clamp(pixelColor, 0.0f, 1.0f);
 	}
 
 	// 3. RENDER CLOUDS FIRST (if ray didn't hit anything)
@@ -393,31 +409,39 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 
 	// 4. ADD GLOW ON TOP (more subtly)
 	glm::vec3 glowTotal(0.0f);
+	glm::vec3 pinkGlow(1.0f, 0.5f, 0.8f);
 
 	for (const auto& seg : segs) {
 		float glow = seg->computeGlowForRay(r);
 
-		// Reduced glow intensity so clouds remain visible
-		glm::vec3 aura = (seg->isMainBranchSegment ? glm::vec3(0.4f, 0.1f, 1.0f)
-												   : glm::vec3(0.6f, 0.2f, 1.0f))
-			* glow * (seg->isMainBranchSegment ? 0.3f : 0.15f);  // Reduced from 1.5f/0.7f
+		if (!seg->isMainBranchSegment && seg->branchDepth == 1)
+			glow *= 5.0f;
 
-		glm::vec3 core = glm::vec3(1.0f, 0.95f, 1.0f) * glow
-			* (seg->isMainBranchSegment ? 0.1f : 0.05f);  // Reduced from 0.4f/0.2f
+		float t = glm::length(seg->midpoint() - seg->startPoint) / seg->length();
+		float tFade = seg->isMainBranchSegment ? 1.0f : (seg->branchDepth == 1 ? 1.0f : powf(1.0f - t, 1.5f));
+		float depthFade = seg->isMainBranchSegment ? 1.0f : (seg->branchDepth == 1 ? 1.0f : powf(0.45f, seg->branchDepth));
+		float finalScale = tFade * depthFade;
 
-		// soft additive blend to avoid over-bright areas
-		glowTotal += (aura + core) * glm::exp(-glowTotal);
+		float auraMult = seg->isMainBranchSegment ? 0.6f : (seg->branchDepth == 1 ? 0.6f : 0.02f);
+		float coreMult = seg->isMainBranchSegment ? 0.15f : (seg->branchDepth == 1 ? 0.15f : 0.01f);
+
+		glm::vec3 aura = pinkGlow * glow * auraMult * finalScale;
+		glm::vec3 core = pinkGlow * glow * coreMult * finalScale;
+
+		if (!seg->isMainBranchSegment && seg->branchDepth == 1)
+			glowTotal += aura + core;
+		else
+			glowTotal += (aura + core) * glm::exp(-glowTotal);
 	}
 
-	// tone-mapping
 	glowTotal = glm::pow(glowTotal, glm::vec3(0.6f));
-	glowTotal = glm::min(glowTotal, glm::vec3(1.0f, 0.95f, 1.0f));
+	glowTotal = glm::min(glowTotal, glm::vec3(1.0f));
 
-	// Blend glow more gently with existing color
-	pixelColor = pixelColor * 1.00f + glowTotal * 0.95f;  // 70% clouds, 30% glow
-
+	pixelColor += glowTotal;
+	pixelColor = glm::clamp(pixelColor, 0.0f, 1.0f);
 	return pixelColor;
 }
+
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key) {

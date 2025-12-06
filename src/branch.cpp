@@ -13,7 +13,8 @@ Branch::Branch(
     float meanSegLen,
     float maxBrAngle,
     glm::vec3 normal,
-    bool mainBranch)
+    bool mainBranch,
+	int depth = 0)
     :
     startingPos(start),
     direction(glm::normalize(dir)),
@@ -25,8 +26,8 @@ Branch::Branch(
     meanSegmentLength(meanSegLen),
     maxBranchAngle(maxBrAngle),
     rotationNormal(glm::normalize(normal)),
-	isMainBranch(mainBranch)
-{ }
+	isMainBranch(mainBranch),
+	branchDepth(depth) { }
 
 // Recursively generate another branch
 void Branch::generateBranch() {
@@ -73,6 +74,8 @@ void Branch::generateBranch() {
 		seg->startPoint = start;
 		seg->endPoint = end;
 
+		seg->branchDepth = branchDepth;
+
         segments.push_back(seg);
 
         // Branch based off probability
@@ -92,7 +95,8 @@ void Branch::generateBranch() {
                 meanSegmentLength,
                 maxBranchAngle,
                 rotationNormal,
-                false
+                false,
+				branchDepth + 1
             );
 
             child.generateBranch();
@@ -171,15 +175,19 @@ float LightningSegment::minDistanceToSegment(const Ray & r) const {
 }
 
 float LightningSegment::computeGlowForRay(const Ray & r) const {
-	float g = 0.08f; // base glow
-	float li = 1.2f;
-	float power = isMainBranchSegment ? 1.8f : 4.5f;
+	float baseGlowMain = 0.08f;
+	float baseGlowChild = 0.04f;
+	float liMain = 1.2f;
+	float liChild = 0.8f;
+
+	float di = minDistanceToSegment(r);
+
 	float W = std::max(radius * 18.0f * (isMainBranchSegment ? 2.5f : 0.3f), 0.12f);
 
-	float di = minDistanceToSegment(r); // distance ray ↔ segment
-	float intensityScale = isMainBranchSegment ? 1.2f : 0.04f;
+	float power = isMainBranchSegment ? 1.8f : 4.5f;
 
-	// closest point on segment (t-parameter)
+	float glow = (isMainBranchSegment ? baseGlowMain : baseGlowChild) * (isMainBranchSegment ? liMain : liChild) * expf(-powf(di / W, power));
+
 	glm::vec3 dir = endPoint - startPoint;
 	float len2 = glm::dot(dir, dir);
 	float t = 0.0f;
@@ -194,9 +202,11 @@ float LightningSegment::computeGlowForRay(const Ray & r) const {
 		t = glm::clamp(t, 0.0f, 1.0f);
 	}
 
-	// fade along length (brighter at base)
-	float fade = isMainBranchSegment ? (1.0f - 0.3f * t) : powf(1.0f - t, 1.5f);
+	float tFade = isMainBranchSegment ? (1.0f - 0.3f * t) : powf(1.0f - t, 1.5f);
 
-	float glow = g * li * expf(-powf(di / W, power));
-	return glow * radius * 18.0f * intensityScale * fade;
+	float depthFactor = isMainBranchSegment ? 1.0f : powf(0.6f, branchDepth);
+
+	float finalGlow = glow * radius * 18.0f * tFade * depthFactor;
+
+	return finalGlow;
 }
