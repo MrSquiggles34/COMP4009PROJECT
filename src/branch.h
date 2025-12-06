@@ -21,6 +21,7 @@ public:
     glm::vec3 rotationNormal;
 
 	bool isMainBranch = false;
+    bool mainBranchHit = false;
 
     // Output a list of generated segments
     std::vector<std::shared_ptr<LightningSegment>> segments;
@@ -40,6 +41,7 @@ public:
     );
 
     void generateBranch();
+    std::function<void(const glm::vec3&)> onMainBranchMove;
 };
 
 #endif

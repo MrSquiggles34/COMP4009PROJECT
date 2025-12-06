@@ -63,13 +63,12 @@ void Branch::generateBranch() {
             center,
             radius,
             height,
-            glm::vec3(1.0),  // color
+            glm::vec3(1.0),  
             axis,
             true,
             *lightPtr
         );
-        seg->isMainBranchSegment = isMainBranch; // <-- Set flag
-
+        seg->isMainBranchSegment = isMainBranch; 
 		seg->startPoint = start;
 		seg->endPoint = end;
 
@@ -77,29 +76,31 @@ void Branch::generateBranch() {
 
         // Branch based off probability
         if (ofRandom(1.0f) < branchProbability) {
-            // Create a child branch
-            float branchAngle = ofRandom(-maxBranchAngle, maxBranchAngle);
-            glm::vec3 branchDir = glm::rotate(direction, glm::radians(branchAngle), rotationNormal);
+            if (!isMainBranch || !mainBranchHit) {
+                // Create a child branch
+                float branchAngle = ofRandom(-maxBranchAngle, maxBranchAngle);
+                glm::vec3 branchDir = glm::rotate(direction, glm::radians(branchAngle), rotationNormal);
 
-            float branchDist = meanBranchLength;
+                float branchDist = meanBranchLength;
 
-            // Gradually change segment properties with each call
-            Branch child(next, branchDir, branchDist,
-                radius * 0.5f,  
-                branchProbability * 0.4f,
-                meanBranchLength * 0.5,
-                maxSegmentAngle * 1.3,
-                meanSegmentLength,
-                maxBranchAngle,
-                rotationNormal,
-                false
-            );
+                // Gradually change segment properties with each call
+                Branch child(next, branchDir, branchDist,
+                    radius * 0.5f,
+                    branchProbability * 0.4f,
+                    meanBranchLength * 0.5,
+                    maxSegmentAngle * 1.3,
+                    meanSegmentLength,
+                    maxBranchAngle,
+                    rotationNormal,
+                    false
+                );
 
-            child.generateBranch();
+                child.generateBranch();
 
-            // append child segments to parent
-            for (auto& cseg : child.segments)
-                segments.push_back(cseg);
+                // append child segments to parent
+                for (auto& cseg : child.segments)
+                    segments.push_back(cseg);
+            }
         }
 
         // Advance

@@ -26,25 +26,25 @@ void ofApp::setup() {
 	// seed openFrameworks random
 	std::srand((unsigned int)time(nullptr)); 
 	ofSeedRandom(std::rand()); 
+	for (int i = 0; i < 1; ++i) {
+		float x = glm::linearRand(-1.0f, 1.0f);
+		float z = glm::linearRand(-0.5f, 0.5f);
+		float y = glm::linearRand(1.3f, 1.7f);
+		float r = glm::linearRand(0.1f, 0.3f);
 
-	float x = glm::linearRand(-1.0f, 1.0f);
-	float z = glm::linearRand(-0.5f, 0.5f);
-	float y = glm::linearRand(1.3f, 1.7f); 
-	float r = glm::linearRand(0.1f, 0.3f);
+		glm::vec3 color = glm::vec3(ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f));
 
-	glm::vec3 color = glm::vec3(ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f), ofRandom(0.2f, 0.8f));
+		auto s = std::make_shared<Sphere>(glm::vec3(x, y, z), r, color);
+		world.push_back(s);
+		strikeTargets.push_back(s);
+	}
 
-	auto s = std::make_shared<Sphere>(glm::vec3(x, y, z), r, color);
-	world.push_back(s);
-	strikeTargets.push_back(s);
-
-	
 	//Adding the ground to the scene.
-	world.push_back(std::make_shared<Plane>(
-		glm::vec3(0, 2, 0),
-		glm::vec3(0, -1, 0),
-		glm::vec3(0.2f, 0.25f, 0.3f)  
-	));
+	//world.push_back(std::make_shared<Plane>(
+	//	glm::vec3(0, 2, 0),
+	//	glm::vec3(0, -1, 0),
+	//	glm::vec3(0.2f, 0.25f, 0.3f)  
+	//));
 
 	// Find the tallest sphere
 	std::shared_ptr<Sphere> tallest = nullptr;
@@ -75,6 +75,17 @@ void ofApp::setup() {
 		glm::vec3(0, 0, 1),
 		true
 	);
+
+	mainBranch.onMainBranchMove = [&](const glm::vec3& pos) {
+		for (auto& s : strikeTargets) {
+			float dist = glm::distance(pos, s->center);
+			if (dist <= s->radius) {
+				mainBranch.mainBranchHit = true;
+				return;
+			}
+		}
+	};
+
 	mainBranch.generateBranch();
 
 	// Copy the segments
@@ -115,7 +126,7 @@ void ofApp::draw(){
 	}
 
 	// Set threads count, each gets a portion of the screen split horizontally
-	int numThreads = std::thread::hardware_concurrency();
+	int numThreads = std::thread::hardware_concurrency() * 1.5;
 	if (numThreads < 0) numThreads = 8;
 	int rowsPerThread = screenHeight / numThreads;
 
@@ -148,6 +159,7 @@ void ofApp::draw(){
 
 	// Anti-aliasing samples
 	int samples = 1;
+	// WARNING : Hard coded 4 samples in the inner loop below, change there if modifying this value
 
 	// Intitiate threads
 	auto t0 = std::chrono::high_resolution_clock::now();
@@ -158,9 +170,6 @@ void ofApp::draw(){
 	// Count the threads
 	for (size_t tid = 0; tid < threadBufs.size(); ++tid) {
 		workers.emplace_back([&, tid]() {
-			// thread-local RNG
-			thread_local std::mt19937 rng((unsigned)std::hash<std::thread::id>()(std::this_thread::get_id()) ^ (unsigned)time(nullptr));
-			std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
 			// Retrieve the buffer and raytrace
 			ThreadBuf& tb = threadBufs[tid];
@@ -171,12 +180,12 @@ void ofApp::draw(){
 			int rowCount = yEnd - yStart;
 			for (int yy = yStart; yy < yEnd; ++yy) {
 				for (int xx = 0; xx < screenWidth; ++xx) {
-					// Randomize and accumulate samples
+					// Randomize and accumulate 4 samples  unrolled THIS IS HARD CODED BUT REDUCED OVERHEAD
 					glm::vec3 accumulated(0.0f);
-					for (int s = 0; s < samples; ++s) {
-						float ux = xx + dist(rng);
-						float vy = yy + dist(rng);
-
+					
+					{
+						float ux = xx + fastRand();
+						float vy = yy + fastRand();
 						accumulated += tracePixel(ux, vy, frameCount, activeSegments);
 					}
 
@@ -212,13 +221,13 @@ void ofApp::draw(){
 		}
 	}
 
-	// Timing and logging
+	// ---------- Timing and logging
 	auto t1 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> took = t1 - t0;
 	timeTotal += took;
 	ofLog() << "Render took " << (took.count() * 1000.0) << " ms (threads=" << numThreads << ", samples=" << samples << ")";
 
-	// Save the images to a folder named 'out'
+	// ---------- Save the images to a folder named 'out'
 	namespace fs = std::filesystem;
 	fs::path cwd = fs::current_path();
 	fs::path search = cwd;
@@ -249,7 +258,7 @@ void ofApp::draw(){
 
 	ofSaveImage(pixels, savePath.string());
 	frameCount++;
-	segmentsToShow += 100;
+	segmentsToShow += 999;
 
 	if (frameCount >= totalFrames) {
 		ofLog() << "IN TOTAL Render took " << (timeTotal.count() * 1000.0) << " ms (threads=" << numThreads << ", samples=" << samples << ")";
@@ -278,7 +287,7 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 	glm::vec3 background(0.0f);
 	glm::vec3 pixelColor = background;
 
-	// 1. OBJECT INTERSECTION 
+	// ---------- OBJECT INTERSECTION 
 	bool hitAnything = false;
 	for (auto& obj : world) {
 		if (obj->hit(r, EPS, closest, rec)) {
@@ -362,7 +371,7 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 		pixelColor = glm::clamp(ambient + diffuse, 0.0f, 1.0f);
 	}
 
-	// 2. LIGHTNING BOLT HIT TEST
+	// ---------- LIGHTNING BOLT HIT TEST
 	for (auto& seg : segs) {
 		hit_record lrec;
 		if (seg->hit(r, EPS, closest, lrec)) {
@@ -386,12 +395,12 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 		}
 	}
 
-	// 3. RENDER CLOUDS FIRST (if ray didn't hit anything)
+	// ---------- RENDER CLOUDS FIRST (if ray didn't hit anything)
 	if (!clouds.empty()) {
 		pixelColor = renderVolume(r, clouds, 100.0f, pixelColor, segs);
 	}
 
-	// 4. ADD GLOW ON TOP (more subtly)
+	// ---------- ADD GLOW ON TOP 
 	glm::vec3 glowTotal(0.0f);
 
 	for (const auto& seg : segs) {
@@ -413,10 +422,26 @@ glm::vec3 ofApp::tracePixel(float x, float y, int frame, const std::vector<std::
 	glowTotal = glm::pow(glowTotal, glm::vec3(0.6f));
 	glowTotal = glm::min(glowTotal, glm::vec3(1.0f, 0.95f, 1.0f));
 
-	// Blend glow more gently with existing color
+	// Blend glow with existing color
 	pixelColor = pixelColor * 1.00f + glowTotal * 0.95f;  // 70% clouds, 30% glow
 
 	return pixelColor;
+}
+
+float ofApp::fastRand() {
+		thread_local uint32_t state = make_seed_for_current_thread();
+
+		xorState ^= xorState << 13;
+		xorState ^= xorState >> 17;
+		xorState ^= xorState << 5;
+		return (xorState & 0x00FFFFFF) * (1.0f / 16777216.0f);
+}
+
+uint32_t ofApp::make_seed_for_current_thread() {
+	std::hash<std::thread::id> hasher;
+	auto thread_id = std::this_thread::get_id();
+	size_t hash = hasher(thread_id);
+	return static_cast<uint32_t>(hash ^ std::chrono::high_resolution_clock::now().time_since_epoch().count());
 }
 
 //--------------------------------------------------------------
