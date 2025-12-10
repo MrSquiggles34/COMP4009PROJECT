@@ -2,10 +2,6 @@
 
 This repo renders a lightning strike using CPU ray tracing, volumetric scattering, and emissive geometry
 
-This repository contains the source code for our COMP 4900 project.  
-The code lives under `src/`, and implements the core functionality for the project assignment.  
-This README explains how to compile and run the project, what files are included, and any known issues.
-
 ## Project structure
 
 ```
