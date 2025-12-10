@@ -7,8 +7,7 @@ This repo renders a lightning strike using CPU ray tracing, volumetric scatterin
 ```
 COMP4009PROJECT/
 ├── src/            ← source code directory
-│   ├── (… .cpp / .h / other source files …)
-│   └── (possible subdirectories under src)
+│   ├── (… .cpp / .h
 ├── out/           ← renders
 ├── README.md       ← this file
 ```
